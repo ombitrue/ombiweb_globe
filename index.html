@@ -3,125 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Глобальный Гео-Дашборд v11.0 Core PRO</title>
+  <title>Глобальный Гео-Дашборд v13.0 Hard-Fix</title>
   
   <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
   
   <style>
-    body {
+    html, body {
       margin: 0;
-      background-color: #050a18;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #040814;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow: hidden;
       color: #fff;
       user-select: none;
     }
+    
+    /* Контейнер теперь жестко прибит к углам экрана через CSS */
     #globe-container {
-      width: 100vw;
-      height: 100vh;
+      display: block;
       position: absolute;
       top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
     }
     
-    /* ИНТЕРАКТИВНЫЕ МАРКЕРЫ СТРАН (HTML вместо WebGL - не лагают и не падают) */
+    /* МАРКЕРЫ СТРАН (HTML-слой) */
     .globe-marker {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      pointer-events: auto !important;
+      display: flex; flex-direction: column; align-items: center;
+      cursor: pointer; pointer-events: auto !important;
     }
     .marker-dot {
-      width: 6px;
-      height: 6px;
-      background: #00f0ff;
-      border-radius: 50%;
+      width: 8px; height: 8px; background: #00f0ff; border-radius: 50%;
       box-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
     }
     .globe-marker:hover .marker-dot,
     .globe-marker.active .marker-dot {
-      width: 12px;
-      height: 12px;
-      background: #ff0055;
+      width: 14px; height: 14px; background: #ff0055;
       box-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
     }
     .marker-label {
-      background: rgba(5, 10, 25, 0.85);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      padding: 3px 8px;
-      border-radius: 5px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #fff;
-      margin-top: 5px;
-      white-space: nowrap;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(4px);
+      background: rgba(5, 10, 25, 0.9); border: 1px solid rgba(0, 240, 255, 0.4);
+      padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      color: #fff; margin-top: 5px; white-space: nowrap; backdrop-filter: blur(4px);
     }
     .globe-marker:hover .marker-label,
     .globe-marker.active .marker-label {
-      border-color: #ff0055;
-      color: #ff0055;
-      background: rgba(15, 5, 15, 0.9);
+      border-color: #ff0055; color: #ff0055; background: rgba(20, 5, 15, 0.95);
     }
 
-    /* ПАНЕЛЬ ПОИСКА: Справа вверху */
+    /* ИНТЕРФЕЙС ПАНЕЛЕЙ */
     .search-panel {
-      position: absolute;
-      top: 25px; right: 25px;
-      z-index: 1000;
-      background: rgba(10, 16, 35, 0.9);
-      border: 1px solid rgba(0, 240, 255, 0.4);
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(12px);
-      display: flex; gap: 10px;
+      position: absolute; top: 25px; right: 25px; z-index: 1000;
+      background: rgba(10, 16, 35, 0.9); border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 12px; padding: 10px; display: flex; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     .search-input {
-      background: rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(0, 240, 255, 0.2);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-      width: 250px;
+      background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; width: 220px; outline: none;
     }
     .search-btn {
-      background: #00f0ff; color: #050a18;
-      border: none; border-radius: 8px;
-      padding: 10px 22px; font-weight: 700; cursor: pointer;
-      font-size: 14px; transition: all 0.2s;
+      background: #00f0ff; color: #040814; border: none; border-radius: 8px;
+      padding: 10px 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;
     }
-    .search-btn:hover { background: #00bfff; box-shadow: 0 0 14px rgba(0, 240, 255, 0.5); }
+    .search-btn:hover { background: #00bfff; box-shadow: 0 0 10px #00f0ff; }
 
-    /* ДАШБОРД СТАТИСТИКИ: Слева вверху */
     .custom-tooltip {
-      position: absolute;
-      top: 25px; left: 25px;
-      background: rgba(6, 12, 28, 0.95);
-      border: 1px solid #00f0ff;
-      border-radius: 14px;
-      padding: 20px; 
-      color: #fff; 
-      font-size: 14px;
-      pointer-events: none;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 240, 255, 0.2);
-      z-index: 1000; 
-      min-width: 320px;
-      backdrop-filter: blur(15px);
+      position: absolute; top: 25px; left: 25px; z-index: 1000;
+      background: rgba(6, 12, 28, 0.95); border: 1px solid #00f0ff;
+      border-radius: 14px; padding: 20px; min-width: 300px; pointer-events: none;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
-    .tooltip-title {
-      font-size: 22px; font-weight: 700; margin-bottom: 14px;
-      color: #00f0ff; border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-      padding-bottom: 8px;
-    }
+    .tooltip-title { font-size: 22px; font-weight: 700; margin-bottom: 14px; color: #00f0ff; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px; }
     .metric { display: flex; justify-content: space-between; margin: 11px 0; }
     .metric-label { color: #a0aec0; }
-    .metric-value { font-weight: 600; color: #ffffff; }
+    .metric-value { font-weight: 600; }
     .highlight-fb { color: #1877F2; }
     .highlight-cards { color: #4cd964; }
     .highlight-gambling { color: #ff3b30; }
@@ -130,7 +90,7 @@
 <body>
 
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Поиск (Нигерия, Марокко, Украина)...">
+    <input type="text" id="search-in" class="search-input" placeholder="Поиск ГЕО (Нигерия, Марокко)...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
@@ -138,110 +98,76 @@
   
   <div id="tooltip" class="custom-tooltip">
     <div id="tt-title" class="tooltip-title">Глобальный Мониторинг</div>
-    <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">WORLD</span></div>
-    <div class="metric"><span class="metric-label">Регион ГЕО:</span> <span id="tt-pop" class="metric-value">Цифровая модель</span></div>
-    <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Стабилен</span></div>
-    <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Онлайн</span></div>
-    <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Анализ</span></div>
+    <div class="metric"><span class="metric-label">ISO Код:</span> <span id="tt-iso" class="metric-value" style="color:#a0aec0;">WORLD</span></div>
+    <div class="metric"><span class="metric-label">Регион:</span> <span id="tt-pop" class="metric-value">Ожидание выбора</span></div>
+    <div class="metric"><span class="metric-label">Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Стабилен</span></div>
+    <div class="metric"><span class="metric-label">Карты/Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Онлайн</span></div>
+    <div class="metric"><span class="metric-label">Гемблинг:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Анализ</span></div>
   </div>
 
   <script>
-    let world = null;
-    let activeSearchCountryIso = null;
-
-    // Огромная база: СНГ, Европа, Америка + Полный стек стран Африки и MENA регионов
+    // Наша база: СНГ, Европа, Африка, MENA регионы
     const massiveDatabase = {
-      // --- СНГ И ЕВРОПА ---
       "UA": { name: "Украина", reg: "Европа / СНГ", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
       "KZ": { name: "Казахстан", reg: "Азия / СНГ", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
       "UZ": { name: "Узбекистан", reg: "Азия / СНГ", fb: "35%", cards: "64%", gambling: "19%", lat: 41.3, lng: 69.2 },
-      "KG": { name: "Киргизия", reg: "Азия / СНГ", fb: "29%", cards: "55%", gambling: "23%", lat: 41.2, lng: 74.7 },
-      "GE": { name: "Грузия", reg: "Кавказ / СНГ", fb: "66%", cards: "79%", gambling: "25%", lat: 42.3, lng: 43.3 },
-      "AM": { name: "Армения", reg: "Кавказ / СНГ", fb: "58%", cards: "76%", gambling: "17%", lat: 40.0, lng: 45.0 },
       "AZ": { name: "Азербайджан", reg: "Кавказ / СНГ", fb: "51%", cards: "72%", gambling: "20%", lat: 40.1, lng: 47.5 },
       "RU": { name: "Россия", reg: "Евразия", fb: "25%", cards: "91%", gambling: "16%", lat: 55.7, lng: 37.6 },
       "DE": { name: "Германия", reg: "Западная Европа", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
       "PL": { name: "Польша", reg: "Восточная Европа", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
-      "GB": { name: "Великобритания", reg: "Западная Европа", fb: "78%", cards: "95%", gambling: "18%", lat: 55.3, lng: -3.4 },
-      "FR": { name: "Франция", reg: "Западная Европа", fb: "65%", cards: "94%", gambling: "12%", lat: 46.2, lng: 2.2 },
-      "NL": { name: "Нидерланды", reg: "Западная Европа", fb: "74%", cards: "98%", gambling: "9%", lat: 52.1, lng: 5.2 },
-      
-      // --- МИРОВЫЕ МЕГА-ХАБЫ ---
       "US": { name: "США", reg: "Северная Америка", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
-      "CA": { name: "Канада", reg: "Северная Америка", fb: "79%", cards: "96%", gambling: "14%", lat: 56.1, lng: -106.3 },
-      "AU": { name: "Австралия", reg: "Океания", fb: "77%", cards: "95%", gambling: "24%", lat: -25.2, lng: 133.7 },
-      "SG": { name: "Сингапур", reg: "Юго-Восточная Азия", fb: "85%", cards: "97%", gambling: "15%", lat: 1.3, lng: 103.8 },
-      "TR": { name: "Турция", reg: "Ближний Восток", fb: "58%", cards: "78%", gambling: "22%", lat: 38.9, lng: 35.2 },
-
-      // --- РЕГИОН MENA (БЛИЖНИЙ ВОСТОК И СЕВЕРНАЯ АФРИКА) ---
       "AE": { name: "ОАЭ", reg: "MENA / Ближний Восток", fb: "93%", cards: "92%", gambling: "11%", lat: 23.4, lng: 53.8 },
       "SA": { name: "Саудовская Аравия", reg: "MENA / Ближний Восток", fb: "74%", cards: "81%", gambling: "14%", lat: 23.8, lng: 45.0 },
-      "QA": { name: "Катар", reg: "MENA / Ближний Восток", fb: "89%", cards: "95%", gambling: "10%", lat: 25.3, lng: 51.1 },
-      "KW": { name: "Кувейт", reg: "MENA / Ближний Восток", fb: "81%", cards: "88%", gambling: "12%", lat: 29.3, lng: 47.4 },
-      "OM": { name: "Оман", reg: "MENA / Ближний Восток", fb: "68%", cards: "79%", gambling: "15%", lat: 21.4, lng: 55.9 },
-      "IL": { name: "Израиль", reg: "MENA / Ближний Восток", fb: "73%", cards: "94%", gambling: "12%", lat: 31.0, lng: 34.8 },
       "EG": { name: "Египет", reg: "MENA / Северная Африка", fb: "53%", cards: "44%", gambling: "15%", lat: 26.8, lng: 30.8 },
       "MA": { name: "Марокко", reg: "MENA / Северная Африка", fb: "49%", cards: "38%", gambling: "19%", lat: 31.7, lng: -7.0 },
-      "DZ": { name: "Алжир", reg: "MENA / Северная Африка", fb: "42%", cards: "29%", gambling: "21%", lat: 28.0, lng: 3.0 },
-      "TN": { name: "Тунис", reg: "MENA / Северная Африка", fb: "51%", cards: "41%", gambling: "16%", lat: 34.0, lng: 9.0 },
-
-      // --- СУБСАХАРСКАЯ АФРИКА ---
-      "ZA": { name: "ЮАР", reg: "Южная Африка", fb: "49%", cards: "67%", gambling: "26%", lat: -30.5, lng: 25.0 },
       "NG": { name: "Нигерия", reg: "Западная Африка", fb: "44%", cards: "35%", gambling: "31%", lat: 9.0, lng: 8.6 },
       "KE": { name: "Кения", reg: "Восточная Африка", fb: "38%", cards: "72%", gambling: "28%", lat: -0.02, lng: 37.9 },
-      "GH": { name: "Гана", reg: "Западная Африка", fb: "41%", cards: "48%", gambling: "22%", lat: 7.9, lng: -1.0 },
-      "CI": { name: "Кот-д'Ивуар", reg: "Западная Африка", fb: "36%", cards: "31%", gambling: "25%", lat: 7.5, lng: -5.5 },
-      "ET": { name: "Эфиопия", reg: "Восточная Африка", fb: "15%", cards: "22%", gambling: "12%", lat: 9.1, lng: 40.4 }
+      "ZA": { name: "ЮАР", reg: "Южная Африка", fb: "49%", cards: "67%", gambling: "26%", lat: -30.5, lng: 25.0 }
     };
 
     const markersData = Object.entries(massiveDatabase).map(([iso, data]) => ({
-      iso: iso,
-      name: data.name,
-      lat: data.lat,
-      lng: data.lng
+      iso: iso, name: data.name, lat: data.lat, lng: data.lng
     }));
 
-    const ttTitle = document.getElementById('tt-title');
-    const ttIso = document.getElementById('tt-iso');
-    const ttPop = document.getElementById('tt-pop');
-    const ttFb = document.getElementById('tt-fb');
-    const ttCards = document.getElementById('tt-cards');
-    const ttGambling = document.getElementById('tt-gambling');
+    let world = null;
+    let activeSearchCountryIso = null;
 
     function updateDashboard(iso, data) {
-      ttTitle.textContent = data.name;
-      ttIso.textContent = iso;
-      ttPop.textContent = data.reg;
-      ttFb.textContent = data.fb;
-      ttCards.textContent = data.cards;
-      ttGambling.textContent = data.gambling;
+      document.getElementById('tt-title').textContent = data.name;
+      document.getElementById('tt-iso').textContent = iso;
+      document.getElementById('tt-pop').textContent = data.reg;
+      document.getElementById('tt-fb').textContent = data.fb;
+      document.getElementById('tt-cards').textContent = data.cards;
+      document.getElementById('tt-gambling').textContent = data.gambling;
     }
 
-    function initApp() {
-      // Инициализируем полностью автономную сферу
-      world = Globe()
-        (document.getElementById('globe-container'))
-        .globeColor('#0b122c') // Глубокий космический синий цвет сферы
+    function initGlobeCore() {
+      const container = document.getElementById('globe-container');
+      
+      // Вычисляем размеры НАПРЯМУЮ из окна браузера в пикселях
+      const viewWidth = window.innerWidth;
+      const viewHeight = window.innerHeight;
+
+      // Инициализируем глобус с принудительной передачей пикселей
+      world = Globe()(container)
+        .width(viewWidth)
+        .height(viewHeight)
+        .globeColor('#0c132c')
         .showAtmosphere(true)
         .atmosphereColor('#00f0ff')
         .atmosphereAltitude(0.2)
-        .showGraticules(true) // Рисует крутую неоновую сетку координат (глобус виден ВСЕГДА)
-
-        // Использование сверхлегких HTML-маркеров вместо падучего WebGL текста
+        .showGraticules(true) // Сетка координат
         .htmlElementsData(markersData)
         .htmlElement(d => {
           const el = document.createElement('div');
           el.className = 'globe-marker';
-          if (d.iso === activeSearchCountryIso) {
-            el.classList.add('active');
-          }
+          if (d.iso === activeSearchCountryIso) el.classList.add('active');
           
           el.innerHTML = `
             <div class="marker-dot"></div>
             <div class="marker-label">${d.name}</div>
           `;
 
-          // Локальные быстрые события мыши без нагрузки на процессор
           el.onmouseenter = () => {
             const data = massiveDatabase[d.iso];
             if (data) updateDashboard(d.iso, data);
@@ -249,9 +175,9 @@
 
           el.onclick = () => {
             activeSearchCountryIso = d.iso;
-            world.htmlElementsData(markersData); // Обновляем класс активности
+            world.htmlElementsData(markersData);
             world.controls().autoRotate = false;
-            world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.3 }, 1200);
+            world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.35 }, 1200);
             updateDashboard(d.iso, massiveDatabase[d.iso]);
           };
 
@@ -261,14 +187,27 @@
       world.controls().autoRotate = true;
       world.controls().autoRotateSpeed = 0.3;
       world.controls().enableDamping = true;
+
+      document.getElementById('tt-pop').textContent = "Карта готова. Выберите ГЕО.";
     }
+
+    // Безопасный отложенный запуск ядра
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initGlobeCore, 150); // Даем 150мс на то, чтобы Render построил верстку
+    });
+
+    // Автоматическая адаптация при изменении размеров экрана
+    window.addEventListener('resize', () => {
+      if (world) {
+        world.width(window.innerWidth).height(window.innerHeight);
+      }
+    });
 
     function handleSearch() {
       const query = document.getElementById('search-in').value.trim().toUpperCase();
       if (!query || !world) return;
 
       let targetIso2 = null;
-
       if (massiveDatabase[query]) {
         targetIso2 = query;
       } else {
@@ -283,15 +222,12 @@
       if (targetIso2) {
         const country = massiveDatabase[targetIso2];
         activeSearchCountryIso = targetIso2;
-        
-        // Моментально перерисовываем маркеры, чтобы активировать нужный
         world.htmlElementsData(markersData);
         world.controls().autoRotate = false;
-        
-        world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.3 }, 1500);
+        world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.35 }, 1500);
         updateDashboard(targetIso2, country);
       } else {
-        alert('ГЕО не найдено. В базе доступны: Нигерия, Марокко, Египет, Саудовская Аравия, Украина, США...');
+        alert('ГЕО не найдено в базе.');
       }
     }
 
@@ -299,8 +235,6 @@
     document.getElementById('search-in').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleSearch();
     });
-
-    initApp();
   </script>
 </body>
 </html>
