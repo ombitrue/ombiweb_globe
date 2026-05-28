@@ -2,76 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Global Geo-Dashboard v18.0 Animated</title>
+  <title>Global Geo-Dashboard v19.0 Fixed</title>
   <style>
-    body { margin: 0; background: #020617; overflow: hidden; color: white; font-family: sans-serif; }
-    #canvas { display: block; }
-    .ui { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px; border: 1px solid #00f0ff; border-radius: 10px; pointer-events: none; }
+    body { margin: 0; background: #020617; overflow: hidden; color: white; font-family: 'Segoe UI', sans-serif; }
+    #canvas { display: block; width: 100vw; height: 100vh; }
+    .ui { position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.85); padding: 20px; border: 1px solid #00f0ff; border-radius: 12px; backdrop-filter: blur(5px); pointer-events: none; width: 250px; }
   </style>
 </head>
 <body>
   <div class="ui">
-    <h3 id="country-name">Rotate: Africa/CIS/World</h3>
-    <p id="stats">Click markers to view data</p>
+    <h3 id="c-name" style="color:#00f0ff; margin-top:0;">Global Monitoring</h3>
+    <div id="c-stats">Select a country to see data</div>
   </div>
   <canvas id="canvas"></canvas>
 
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    let rotation = 0;
-
-    // Расширенный пул стран (x, y - координаты на сфере)
+    
+    // Точные координаты распределения по экрану (0.1 - 0.9)
     const countries = [
-      { name: "Nigeria", x: 0, y: 0, fb: "46%", cards: "38%", g: "32%" },
-      { name: "Senegal", x: -0.2, y: 0.1, fb: "41%", cards: "39%", g: "15%" },
-      { name: "Cameroon", x: 0.1, y: 0.1, fb: "33%", cards: "28%", g: "26%" },
-      { name: "Mali", x: -0.1, y: 0.2, fb: "25%", cards: "17%", g: "20%" },
-      { name: "Ethiopia", x: 0.3, y: 0.1, fb: "16%", cards: "22%", g: "11%" },
-      { name: "Cote d'Ivoire", x: -0.15, y: 0.1, fb: "38%", cards: "34%", g: "24%" },
-      { name: "Burkina Faso", x: -0.05, y: 0.15, fb: "22%", cards: "19%", g: "18%" },
-      { name: "Ukraine", x: 0.2, y: -0.4, fb: "68%", cards: "84%", g: "14%" },
-      { name: "Kazakhstan", x: 0.5, y: -0.3, fb: "48%", cards: "89%", g: "21%" },
-      { name: "Uzbekistan", x: 0.4, y: -0.2, fb: "35%", cards: "64%", g: "19%" },
-      { name: "Italy", x: 0.05, y: -0.35, fb: "60%", cards: "88%", g: "15%" },
-      { name: "USA", x: -0.8, y: -0.3, fb: "82%", cards: "94%", g: "17%" }
+      { name: "Nigeria", x: 0.45, y: 0.55, fb: "46%", cards: "38%", g: "32%" },
+      { name: "Senegal", x: 0.35, y: 0.50, fb: "41%", cards: "39%", g: "15%" },
+      { name: "Cameroon", x: 0.52, y: 0.58, fb: "33%", cards: "28%", g: "26%" },
+      { name: "Mali", x: 0.40, y: 0.45, fb: "25%", cards: "17%", g: "20%" },
+      { name: "Ethiopia", x: 0.65, y: 0.52, fb: "16%", cards: "22%", g: "11%" },
+      { name: "Cote d'Ivoire", x: 0.38, y: 0.55, fb: "38%", cards: "34%", g: "24%" },
+      { name: "Burkina Faso", x: 0.42, y: 0.50, fb: "22%", cards: "19%", g: "18%" },
+      { name: "Kenya", x: 0.68, y: 0.60, fb: "39%", cards: "74%", g: "29%" },
+      { name: "Ghana", x: 0.41, y: 0.56, fb: "43%", cards: "46%", g: "21%" },
+      { name: "Ukraine", x: 0.60, y: 0.30, fb: "68%", cards: "84%", g: "14%" },
+      { name: "Kazakhstan", x: 0.75, y: 0.35, fb: "48%", cards: "89%", g: "21%" }
     ];
 
-    function animate() {
+    let selected = null;
+
+    function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const radius = 200;
-
-      rotation += 0.01; // Скорость вращения
-
+      
       countries.forEach(c => {
-        // Математика кручения
-        const x = Math.cos(rotation) * c.x * radius - Math.sin(rotation) * c.y * radius;
-        const y = c.y * radius;
+        const px = c.x * canvas.width;
+        const py = c.y * canvas.height;
         
-        // Рисуем точку
-        ctx.fillStyle = "#00f0ff";
+        // Рисуем линию к маркеру
+        ctx.strokeStyle = selected === c ? "#ff0055" : "#00f0ff";
+        ctx.fillStyle = selected === c ? "#ff0055" : "#00f0ff";
+        
         ctx.beginPath();
-        ctx.arc(cx + x, cy + y, 5, 0, Math.PI * 2);
+        ctx.arc(px, py, selected === c ? 8 : 4, 0, Math.PI*2);
         ctx.fill();
         
-        // Текст
         ctx.fillStyle = "white";
-        ctx.fillText(c.name, cx + x + 10, cy + y);
+        ctx.fillText(c.name, px + 12, py + 4);
       });
-
-      requestAnimationFrame(animate);
     }
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
+    canvas.addEventListener('click', e => {
+      countries.forEach(c => {
+        const dx = (c.x * canvas.width) - e.clientX;
+        const dy = (c.y * canvas.height) - e.clientY;
+        if (Math.sqrt(dx*dx + dy*dy) < 20) {
+          selected = c;
+          document.getElementById('c-name').innerText = c.name;
+          document.getElementById('c-stats').innerHTML = `FB: ${c.fb}<br>Cards: ${c.cards}<br>Gamble: ${c.g}`;
+          render();
+        }
+      });
+    });
 
-    window.addEventListener('resize', resize);
-    resize();
-    animate();
+    window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; render(); };
+    window.onresize();
   </script>
 </body>
 </html>
