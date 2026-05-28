@@ -3,220 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Geo-Dashboard v16.0 Canvas Core</title>
-  
+  <title>Dashboard v17.0 Emergency</title>
   <style>
-    body {
-      margin: 0;
-      background-color: #050811; /* Тот же глубокий космос */
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      color: #fff;
-      user-select: none;
-    }
-    #main-canvas {
-      width: 100vw;
-      height: 100vh;
-      display: block;
-      position: absolute;
-      top: 0; left: 0;
-      z-index: 1;
-    }
+    body { margin: 0; background-color: #050811; color: #fff; font-family: sans-serif; overflow: hidden; }
     
-    /* HTML Интерфейс - оставляем твой стиль */
-    .custom-tooltip {
-      position: absolute;
-      top: 25px;
-      left: 25px;
-      background: rgba(6, 11, 26, 0.95);
-      border: 1px solid #00f0ff;
-      border-radius: 14px;
-      padding: 20px; 
-      color: #fff; 
-      font-size: 14px;
-      pointer-events: none;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 240, 255, 0.25);
-      z-index: 1000; 
-      min-width: 320px;
-      backdrop-filter: blur(15px);
+    /* ФИЗИЧЕСКИЙ КОНТЕЙНЕР */
+    #map-surface {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, #1e293b 0%, #020617 70%);
+      display: flex; align-items: center; justify-content: center;
     }
-    .tooltip-title {
-      font-size: 22px; font-weight: 700; margin-bottom: 14px;
-      color: #00f0ff; border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-      padding-bottom: 8px;
+
+    /* МАРКЕРЫ КАК КНОПКИ */
+    .geo-btn {
+      position: absolute; padding: 8px 12px; background: #00f0ff; color: #000;
+      border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer;
+      border: none; box-shadow: 0 0 10px #00f0ff;
     }
-    .metric { display: flex; justify-content: space-between; margin: 11px 0; }
-    .metric-label { color: #a0aec0; }
-    .metric-value { font-weight: 600; color: #ffffff; }
-    .highlight-fb { color: #1877F2; }
-    .highlight-cards { color: #4cd964; }
-    .highlight-gambling { color: #ff3b30; }
+
+    .tooltip {
+      position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8);
+      padding: 20px; border: 1px solid #00f0ff; border-radius: 10px; z-index: 100;
+    }
   </style>
 </head>
 <body>
 
-  <canvas id="main-canvas"></canvas>
-  
-  <div id="tooltip" class="custom-tooltip">
-    <div id="tt-title" class="tooltip-title">Global Monitoring</div>
-    <div class="metric"><span class="metric-label">ISO 2 Code:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">WORLD</span></div>
-    <div class="metric"><span class="metric-label">Region GEO:</span> <span id="tt-pop" class="metric-value">Canvas model v16</span></div>
-    <div class="metric"><span class="metric-label">FB Coverage:</span> <span id="tt-fb" class="metric-value highlight-fb">Offline OK</span></div>
-    <div class="metric"><span class="metric-label">Cards/Mob:</span> <span id="tt-cards" class="metric-value highlight-cards">Online</span></div>
-    <div class="metric"><span class="metric-label">Gambling:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Analysis</span></div>
+  <div id="map-surface">
+    <h1 style="color: #64748b; font-size: 24px;">LOADING GEO DATA...</h1>
+  </div>
+
+  <div class="tooltip" id="ui">
+    <h3>Global Monitoring</h3>
+    <p id="info">Select a country</p>
   </div>
 
   <script>
-    // Твоя база данных (все названия ТОЛЬКО на английском)
-    const massiveDatabase = {
-      // Твой запрошенный пак (Африка)
-      "CI": { name: "Cote d'Ivoire", reg: "Western Africa", fb: "38%", cards: "34%", gambling: "24%", x: 0.485, y: 0.542 },
-      "BF": { name: "Burkina Faso", reg: "Western Africa", fb: "22%", cards: "19%", gambling: "18%", x: 0.495, y: 0.515 },
-      "SN": { name: "Senegal", reg: "Western Africa", fb: "41%", cards: "39%", gambling: "15%", x: 0.461, y: 0.505 },
-      "CM": { name: "Cameroon", reg: "Central Africa", fb: "33%", cards: "28%", gambling: "26%", x: 0.534, y: 0.543 },
-      "ET": { name: "Ethiopia", reg: "Eastern Africa", fb: "16%", cards: "22%", gambling: "11%", x: 0.612, y: 0.535 },
-      "ML": { name: "Mali", reg: "Western Africa", fb: "25%", cards: "17%", gambling: "20%", x: 0.487, y: 0.490 },
-      // MENA / Europe
-      "NG": { name: "Nigeria", reg: "Western Africa", fb: "46%", cards: "38%", gambling: "32%", x: 0.521, y: 0.533 },
-      "KE": { name: "Kenya", reg: "Eastern Africa", fb: "39%", cards: "74%", gambling: "29%", x: 0.603, y: 0.569 },
-      "EG": { name: "Egypt", reg: "MENA / North Africa", fb: "55%", cards: "42%", gambling: "14%", x: 0.583, y: 0.443 },
-      "MA": { name: "Morocco", reg: "MENA / North Africa", fb: "51%", cards: "36%", gambling: "18%", lat: 0.479, lng: 0.428 },
-      "UA": { name: "Ukraine", reg: "Europe / CIS", fb: "68%", cards: "84%", gambling: "14%", x: 0.584, y: 0.354 },
-      "KZ": { name: "Kazakhstan", reg: "Asia / CIS", fb: "48%", cards: "89%", gambling: "21%", x: 0.662, y: 0.364 },
-      "RU": { name: "Russia", reg: "Eurasia", fb: "25%", cards: "91%", gambling: "16%", x: 0.700, y: 0.300 },
-      "US": { name: "USA", reg: "North America", fb: "82%", cards: "94%", gambling: "17%", x: 0.222, y: 0.384 }
+    const data = {
+      "Nigeria": { top: "50%", left: "48%", fb: "46%", cards: "38%", gamble: "32%" },
+      "Senegal": { top: "48%", left: "45%", fb: "41%", cards: "39%", gamble: "15%" },
+      "Cameroon": { top: "53%", left: "51%", fb: "33%", cards: "28%", gamble: "26%" },
+      "Mali": { top: "45%", left: "46%", fb: "25%", cards: "17%", gamble: "20%" },
+      "Ethiopia": { top: "50%", left: "58%", fb: "16%", cards: "22%", gamble: "11%" }
     };
 
-    const canvas = document.getElementById('main-canvas');
-    const ctx = canvas.getContext('2d');
+    const surface = document.getElementById('map-surface');
     
-    let activeCountryIso = null;
-
-    // Функция обновления дашборда
-    function updateDashboard(iso, data) {
-      document.getElementById('tt-title').textContent = data.name;
-      document.getElementById('tt-iso').textContent = iso;
-      document.getElementById('tt-pop').textContent = data.reg;
-      document.getElementById('tt-fb').textContent = data.fb;
-      document.getElementById('tt-cards').textContent = data.cards;
-      document.getElementById('tt-gambling').textContent = data.gambling;
-    }
-
-    // Ресайз канваса
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      draw();
-    }
-
-    // Основная функция рисования (АВТОНОМНОЕ 2D)
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
-      // 1. Рисуем сферу (Градиент, чтобы она не была плоской)
-      ctx.beginPath();
-      const radius = Math.min(canvas.width, canvas.height) * 0.4;
-      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      gradient.addColorStop(0, '#070d1d'); // Центр
-      gradient.addColorStop(1, '#020612'); // Края (темнее)
-      ctx.fillStyle = gradient;
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Рисуем Атмосферу (Твое неоновое свечение)
-      ctx.beginPath();
-      ctx.lineWidth = 10;
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#00f0ff';
-      ctx.arc(cx, cy, radius + 2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0; // Сбрасываем тень
-
-      // 3. Рисуем Сетку Координат (Graticules, чтобы сфера была видна гарантированно)
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
-      ctx.lineWidth = 0.5;
-      
-      // Меридианы
-      for (let i = -180; i < 180; i += 15) {
-        const rad = i * (Math.PI / 180);
-        // Очень упрощенная проекция, чтобы не вешать CPU
-        const scale = Math.cos(rad);
-        ctx.beginPath();
-        // Используем эллипс, чтобы имитировать 3D
-        ctx.ellipse(cx, cy, radius * Math.abs(scale), radius, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      
-      // Параллели
-      for (let i = -90; i < 90; i += 15) {
-        const rad = i * (Math.PI / 180);
-        const y = cy + radius * Math.sin(rad);
-        const yRadius = radius * Math.cos(rad);
-        
-        ctx.beginPath();
-        // ctx.ellipse(cx, cy, radius, yRadius, 0, 0, Math.PI * 2); // Это для меридианов
-        ctx.moveTo(cx - radius * Math.cos(rad), y);
-        ctx.lineTo(cx + radius * Math.cos(rad), y);
-        ctx.stroke();
-      }
-
-      // 4. Рисуем Маркеры Стран (Твои ГЕО)
-      Object.entries(massiveDatabase).forEach(([iso, data]) => {
-        const mx = data.x * canvas.width;
-        const my = data.y * canvas.height;
-        
-        // Убеждаемся, что маркер находится на сфере (для этой проекции)
-        const dist = Math.sqrt((mx - cx)**2 + (my - cy)**2);
-        if (dist > radius - 10) return; // Скрываем маркеры за краем
-
-        const isActive = (iso === activeCountryIso);
-        
-        // Неоновый Точка-Маркер
-        ctx.beginPath();
-        ctx.arc(mx, my, isActive ? 8 : 4, 0, Math.PI * 2);
-        
-        ctx.fillStyle = isActive ? '#ff0055' : '#00f0ff';
-        ctx.shadowBlur = isActive ? 20 : 10;
-        ctx.shadowColor = isActive ? '#ff0055' : '#00f0ff';
-        ctx.fill();
-        ctx.shadowBlur = 0; // Сброс
-        
-        // Название страны (Текст, который Render не может сломать)
-        ctx.fillStyle = isActive ? '#ff0055' : '#fff';
-        ctx.font = `bold ${isActive ? '13px' : '11px'} -apple-system, monospace`;
-        ctx.textAlign = 'center';
-        ctx.fillText(data.name, mx, my + (isActive ? 22 : 18));
-      });
-    }
-
-    // Обработка кликов (выбор страны)
-    canvas.addEventListener('click', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      let foundIso = null;
-      Object.entries(massiveDatabase).forEach(([iso, data]) => {
-        const mx = data.x * canvas.width;
-        const my = data.y * canvas.height;
-        // Зона клика вокруг маркера
-        if (Math.abs(mouseX - mx) < 15 && Math.abs(mouseY - my) < 15) {
-          foundIso = iso;
-        }
-      });
-
-      if (foundIso) {
-        activeCountryIso = foundIso;
-        updateDashboard(foundIso, massiveDatabase[foundIso]);
-        draw(); // Перерисовать, чтобы подсветить
-      }
+    // Рендерим маркеры прямо в DOM
+    Object.entries(data).forEach(([name, pos]) => {
+      const btn = document.createElement('button');
+      btn.className = 'geo-btn';
+      btn.textContent = name;
+      btn.style.top = pos.top;
+      btn.style.left = pos.left;
+      btn.onclick = () => {
+        document.getElementById('info').innerHTML = 
+          `<b>${name}</b><br>FB: ${pos.fb}<br>Cards: ${pos.cards}<br>Gamble: ${pos.gamble}`;
+      };
+      surface.appendChild(btn);
     });
 
-    window.addEventListener('resize', resize);
-    resize(); // Запуск
+    surface.querySelector('h1').style.display = 'none';
   </script>
 </body>
 </html>
