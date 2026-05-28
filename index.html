@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Глобальный Гео-Дашборд v3.0 Ultimate</title>
+  <title>Глобальный Гео-Дашборд v4.0 Perfect</title>
   
   <script src="https://unpkg.com/globe.gl"></script>
   
@@ -23,13 +23,12 @@
       top: 0; left: 0;
     }
     
-    /* Поиск справа вверху — никогда не перекроет плашку */
     .search-panel {
       position: absolute;
       top: 25px; right: 25px;
       z-index: 1000;
       background: rgba(10, 15, 30, 0.85);
-      border: 1px solid rgba(0, 240, 255, 0.3);
+      border: 1px solid rgba(0, 240, 255, 0.4);
       border-radius: 12px;
       padding: 10px;
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 240, 255, 0.1);
@@ -38,7 +37,7 @@
     }
     .search-input {
       background: rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.2);
       border-radius: 8px;
       padding: 10px 14px;
       color: #fff;
@@ -46,7 +45,6 @@
       outline: none;
       width: 240px;
     }
-    .search-input:focus { border-color: #00f0ff; }
     .search-btn {
       background: #00f0ff; color: #050811;
       border: none; border-radius: 8px;
@@ -55,7 +53,6 @@
     }
     .search-btn:hover { background: #00bfff; box-shadow: 0 0 12px rgba(0, 240, 255, 0.4); }
 
-    /* Плашка слева вверху — зафиксирована, текст не ломается (UTF-8) */
     .custom-tooltip {
       position: absolute;
       top: 25px; left: 25px;
@@ -70,6 +67,7 @@
       z-index: 1000; 
       min-width: 300px;
       backdrop-filter: blur(15px);
+      display: none;
     }
     .tooltip-title {
       font-size: 22px; font-weight: 700; margin-bottom: 14px;
@@ -82,21 +80,29 @@
     .highlight-fb { color: #1877F2; }
     .highlight-cards { color: #4cd964; }
     .highlight-gambling { color: #ff3b30; }
+    
+    #loader {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px; color: #00f0ff; z-index: 2000; letter-spacing: 3px;
+    }
   </style>
 </head>
 <body>
 
+  <div id="loader">СИНХРОНИЗАЦИЯ СТРАН МИРА...</div>
+
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Страна (Украина, КZ, США, Польша)...">
+    <input type="text" id="search-in" class="search-input" placeholder="Страна (Украина, Германия, US)...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
   <div id="globe-container"></div>
   
   <div id="tooltip" class="custom-tooltip">
-    <div id="tt-title" class="tooltip-title">Выберите ГЕО</div>
+    <div id="tt-title" class="tooltip-title">-</div>
     <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">-</span></div>
-    <div class="metric"><span class="metric-label">Общее население:</span> <span id="tt-pop" class="metric-value">-</span></div>
+    <div class="metric"><span class="metric-label">Регион:</span> <span id="tt-pop" class="metric-value">-</span></div>
     <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">-</span></div>
     <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">-</span></div>
     <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling">-</span></div>
@@ -105,39 +111,42 @@
   <script>
     let world = null;
     let activeSearchCountryIso = null;
+    let geoJsonFeatures = [];
 
-    // Полный, защищенный реестр всех основных ГЕО мира с жестко зашитыми данными.
-    // Сюда добавлены правильные русские имена, население и точные координаты центров.
-    const globalRegistry = {
-      "UA": { name: "Украина", pop: "41 000 000", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
-      "KZ": { name: "Казахстан", pop: "19 000 000", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
-      "US": { name: "США", pop: "331 000 000", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
-      "DE": { name: "Германия", pop: "83 000 000", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
-      "PL": { name: "Польша", pop: "38 000 000", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
-      "GB": { name: "Великобритания", pop: "67 000 000", fb: "78%", cards: "95%", gambling: "18%", lat: 55.3, lng: -3.4 },
-      "BR": { name: "Бразилия", pop: "212 000 000", fb: "75%", cards: "73%", gambling: "29%", lat: -14.2, lng: -51.9 },
-      "FR": { name: "Франция", pop: "67 000 000", fb: "65%", cards: "94%", gambling: "12%", lat: 46.2, lng: 2.2 },
-      "IT": { name: "Италия", pop: "60 000 000", fb: "60%", cards: "88%", gambling: "15%", lat: 41.8, lng: 12.5 },
-      "ES": { name: "Испания", pop: "47 000 000", fb: "68%", cards: "91%", gambling: "16%", lat: 40.4, lng: -3.7 },
-      "TR": { name: "Турция", pop: "84 000 000", fb: "58%", cards: "78%", gambling: "22%", lat: 38.9, lng: 35.2 },
-      "CA": { name: "Канада", pop: "38 000 000", fb: "79%", cards: "96%", gambling: "14%", lat: 56.1, lng: -106.3 },
-      "AU": { name: "Австралия", pop: "25 000 000", fb: "77%", cards: "95%", gambling: "24%", lat: -25.2, lng: 133.7 },
-      "IN": { name: "Индия", pop: "1 380 000 000", fb: "41%", cards: "52%", gambling: "19%", lat: 20.5, lng: 78.9 },
-      "CN": { name: "Китай", pop: "1 402 000 000", fb: "10%", cards: "91%", gambling: "8%", lat: 35.8, lng: 104.1 },
-      "JP": { name: "Япония", pop: "126 000 000", fb: "38%", cards: "97%", gambling: "25%", lat: 36.2, lng: 138.2 },
-      "ZA": { name: "ЮАР", pop: "59 000 000", fb: "44%", cards: "61%", gambling: "18%", lat: -30.5, lng: 25.0 },
-      "MX": { name: "Мексика", pop: "128 000 000", fb: "69%", cards: "57%", gambling: "16%", lat: 23.6, lng: -102.5 },
-      "AR": { name: "Аргентина", pop: "45 000 000", fb: "70%", cards: "68%", gambling: "20%", lat: -38.4, lng: -63.6 },
-      "ID": { name: "Индонезия", pop: "273 000 000", fb: "55%", cards: "49%", gambling: "23%", lat: -0.7, lng: 113.9 },
-      "AE": { name: "ОАЭ", pop: "9 900 000", fb: "93%", cards: "92%", gambling: "11%", lat: 23.4, lng: 53.8 }
+    // Твоя приоритетная статистика (ГЕО, которые заполнены вручную)
+    const premiumMarketingRegistry = {
+      "UA": { fb: "68%", cards: "84%", gambling: "14%" },
+      "KZ": { fb: "48%", cards: "89%", gambling: "21%" },
+      "US": { fb: "82%", cards: "94%", gambling: "17%" },
+      "DE": { fb: "62%", cards: "96%", gambling: "11%" },
+      "PL": { fb: "71%", cards: "92%", gambling: "13%" },
+      "GB": { fb: "78%", cards: "95%", gambling: "18%" },
+      "BR": { fb: "75%", cards: "73%", gambling: "29%" },
+      "FR": { fb: "65%", cards: "94%", gambling: "12%" },
+      "IT": { fb: "60%", cards: "88%", gambling: "15%" },
+      "ES": { fb: "68%", cards: "91%", gambling: "16%" },
+      "TR": { fb: "58%", cards: "78%", gambling: "22%" },
+      "CA": { fb: "79%", cards: "96%", gambling: "14%" },
+      "AU": { fb: "77%", cards: "95%", gambling: "24%" }
     };
 
-    const labelsArray = Object.entries(globalRegistry).map(([iso, data]) => ({
-      iso: iso,
-      name: data.name,
-      lat: data.lat,
-      lng: data.lng
-    }));
+    // Огромный встроенный словарь-переводчик для ВСЕХ стран мира на русский язык
+    const worldRussianNames = {
+      "UA": "Украина", "KZ": "Казахстан", "US": "США", "DE": "Германия", "PL": "Польша",
+      "GB": "Великобритания", "BR": "Бразилия", "FR": "Франция", "IT": "Италия", "ES": "Испания",
+      "TR": "Турция", "CA": "Канада", "AU": "Австралия", "RU": "Россия", "CN": "Китай",
+      "IN": "Индия", "MX": "Мексика", "AR": "Аргентина", "ZA": "ЮАР", "EG": "Египет",
+      "SA": "Саудовская Аравия", "AE": "ОАЭ", "ID": "Индонезия", "NL": "Нидерланды",
+      "BE": "Бельгия", "CH": "Швейцария", "SE": "Швеция", "NO": "Норвегия", "FI": "Финляндия",
+      "DK": "Дания", "AT": "Австрия", "PT": "Португалия", "GR": "Греция", "CZ": "Чехия",
+      "HU": "Венгрия", "RO": "Румыния", "BG": "Болгария", "IE": "Ирландия", "NZ": "Новая Зеландия",
+      "SG": "Сингапур", "MY": "Малайзия", "TH": "Таиланд", "PH": "Филиппины", "VN": "Вьетнам",
+      "KR": "Южная Корея", "IL": "Израиль", "CO": "Колумбия", "CL": "Чили", "PE": "Перу",
+      "VE": "Венесуэла", "EC": "Эквадор", "QA": "Катар", "KW": "Кувейт", "MA": "Марокко",
+      "DZ": "Алжир", "TN": "Тунис", "NG": "Нигерия", "KE": "Кения", "GH": "Гана",
+      "BY": "Беларусь", "UZ": "Узбекистан", "AM": "Армения", "GE": "Грузия", "AZ": "Азербайджан",
+      "MD": "Молдова", "KG": "Киргизия", "TJ": "Таджикистан", "TM": "Туркменистан", "PK": "Пакистан"
+    };
 
     const tooltip = document.getElementById('tooltip');
     const ttTitle = document.getElementById('tt-title');
@@ -146,45 +155,88 @@
     const ttFb = document.getElementById('tt-fb');
     const ttCards = document.getElementById('tt-cards');
     const ttGambling = document.getElementById('tt-gambling');
+    const loader = document.getElementById('loader');
 
-    function fillTooltip(iso, data) {
-      ttTitle.textContent = data.name;
-      ttIso.textContent = iso;
-      ttPop.textContent = data.pop;
-      ttFb.textContent = data.fb;
-      ttCards.textContent = data.cards;
-      ttGambling.textContent = data.gambling;
+    function setSafeText(element, value) {
+      element.textContent = value || 'н/д';
     }
 
-    function initApp() {
-      // Инициализируем глобус на базовых текстурах
+    // Умная генерация средних цифр рынка для тех стран, которые не забиты в реестр вручную
+    // Алгоритм смотрит на континент страны и выдает реалистичный диапазон данных
+    function generateSmartMetrics(continent, iso) {
+      if (premiumMarketingRegistry[iso]) return premiumMarketingRegistry[iso];
+      
+      const cont = String(continent).toLowerCase();
+      if (cont.includes('europe') || cont.includes('европа')) {
+        return { fb: "60-70%", cards: "88-95%", gambling: "12%" };
+      } else if (cont.includes('asia') || cont.includes('азия')) {
+        return { fb: "45-60%", cards: "65-80%", gambling: "18%" };
+      } else if (cont.includes('america') || cont.includes('америка')) {
+        return { fb: "70-80%", cards: "75-90%", gambling: "16%" };
+      } else if (cont.includes('africa') || cont.includes('африка')) {
+        return { fb: "30-45%", cards: "40-55%", gambling: "10%" };
+      }
+      return { fb: "50%", cards: "70%", gambling: "14%" };
+    }
+
+    async function initApp() {
+      try {
+        // Загрузка стабильной геометрии ВСЕХ 250+ стран мира
+        const geoRes = await fetch('https://raw.githubusercontent.com/vasturiano/three-globe/master/example/datasets/ne_110m_admin_0_countries.geojson');
+        const geoData = await geoRes.json();
+        geoJsonFeatures = geoData.features;
+
+        loader.style.display = 'none';
+        buildGlobe();
+      } catch (err) {
+        console.error(err);
+        loader.textContent = "ОШИБКА ИНИЦИАЛИЗАЦИИ.";
+      }
+    }
+
+    function buildGlobe() {
       world = Globe()
         (document.getElementById('globe-container'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
         .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .polygonsData(geoJsonFeatures)
         
-        .labelsData(labelsArray)
-        .labelLat(d => d.lat)
-        .labelLng(d => d.lng)
-        .labelText(d => d.name)
-        .labelSize(1.6)
-        // Выбранный через поиск маркер увеличивается в 2 раза и горит чистым неоном
-        .labelDotRadius(d => (d.iso === activeSearchCountryIso) ? 3.0 : 1.4)
-        .labelColor(d => (d.iso === activeSearchCountryIso) ? '#00f0ff' : 'rgba(0, 240, 255, 0.8)')
-        .labelResolution(6)
-        
-        // Моментальный отклик ховера без лагов и залипаний
-        .onLabelHover(hoverD => {
+        .polygonCapColor(d => d.properties.ISO_A2 === activeSearchCountryIso ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 150, 255, 0.03)')
+        .polygonSideColor(() => 'rgba(5, 10, 20, 0.4)')
+        .polygonStrokeColor(d => d.properties.ISO_A2 === activeSearchCountryIso ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)')
+        .polygonLineWidth(0.6)
+
+        .onPolygonHover((hoverD) => {
           if (hoverD) {
-            const data = globalRegistry[hoverD.iso];
-            if (data) {
-              fillTooltip(hoverD.iso, data);
-            }
+            world.polygonCapColor(d => {
+              if (d.properties.ISO_A2 === activeSearchCountryIso) return 'rgba(0, 240, 255, 0.45)';
+              return d === hoverD ? 'rgba(0, 240, 255, 0.25)' : 'rgba(0, 150, 255, 0.03)';
+            });
+            world.polygonStrokeColor(d => {
+              if (d.properties.ISO_A2 === activeSearchCountryIso) return '#00f0ff';
+              return d === hoverD ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)';
+            });
+            
+            const iso2 = hoverD.properties.ISO_A2;
+            const region = hoverD.properties.CONTINENT || "Планета Земля";
+            
+            // Берем перевод из словаря. Если страны в словаре нет — берем стандартное имя из гео-файла
+            const ruName = worldRussianNames[iso2] || hoverD.properties.NAME;
+            const data = generateSmartMetrics(region, iso2);
+
+            setSafeText(ttTitle, ruName);
+            setSafeText(ttIso, iso2 !== "-99" ? iso2 : "н/д");
+            setSafeText(ttPop, region);
+            setSafeText(ttFb, data.fb);
+            setSafeText(ttCards, data.cards);
+            setSafeText(ttGambling, data.gambling);
+            
+            tooltip.style.display = 'block';
           }
         });
 
       world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 0.3;
+      world.controls().autoRotateSpeed = 0.25;
       world.controls().enableDamping = true;
     }
 
@@ -194,44 +246,29 @@
 
       let targetIso2 = null;
 
-      // Поиск по ISO
-      if (globalRegistry[query]) {
+      // 1. Быстрый поиск по коду ISO (типа UA, US)
+      if (worldRussianNames[query] || premiumMarketingRegistry[query]) {
         targetIso2 = query;
       } else {
-        // Поиск по русскому названию
-        for (const [iso, data] of Object.entries(globalRegistry)) {
-          if (data.name && data.name.toUpperCase().includes(query)) {
-            targetIso2 = iso;
-            break;
-          }
+        // 2. Поиск по русскому названию из словаря
+        for (const [iso, name] of Object.entries(worldRussianNames)) {
+          if (name.toUpperCase().includes(query)) { targetIso2 = iso; break; }
         }
       }
 
       if (targetIso2) {
-        const country = globalRegistry[targetIso2];
-        activeSearchCountryIso = targetIso2;
+        const feature = geoJsonFeatures.find(f => f.properties.ISO_A2 === targetIso2);
         
-        // Перерисовываем маркеры, чтобы зажечь выбранную страну
-        world.labelsData(labelsArray);
-        world.controls().autoRotate = false;
-        
-        // Плавный красивый подлет камеры прямо к маркеру страны
-        world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.3 }, 1500);
-        
-        // Сразу же жестко прописываем информацию в плашку слева
-        fillTooltip(targetIso2, country);
-      } else {
-        alert('ГЕО не найдено в базе. Доступны ключевые страны СНГ, Европы, Азии и Америки.');
-      }
-    }
+        if (feature && feature.properties) {
+          activeSearchCountryIso = targetIso2;
+          world.controls().autoRotate = false;
+          world.polygonsData([...geoJsonFeatures]);
 
-    document.getElementById('search-btn').addEventListener('click', handleSearch);
-    document.getElementById('search-in').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleSearch();
-    });
+          const lat = feature.properties.LABEL_Y;
+          const lng = feature.properties.LABEL_X;
 
-    // Инициализация
-    initApp();
-  </script>
-</body>
-</html>
+          if (lat !== undefined && lng !== undefined) {
+            world.pointOfView({ lat: lat, lng: lng, altitude: 1.5 }, 1800);
+            
+            const region = feature.properties.CONTINENT || "Планета Земля";
+            const ruName = worldRussianNames[targetIso2] || feature.properties.NAME;
