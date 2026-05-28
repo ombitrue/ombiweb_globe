@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Глобальный Гео-Дашборд v5.0 Absolute</title>
+  <title>Глобальный Гео-Дашборд v6.0 Fixed</title>
   
-  <script src="https://unpkg.com/globe.gl"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/globe.gl/2.32.1/globe.gl.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
   <style>
     body {
@@ -23,7 +23,7 @@
       top: 0; left: 0;
     }
     
-    /* ПОИСК СПРАВА */
+    /* Панель поиска справа вверху */
     .search-panel {
       position: absolute;
       top: 25px; right: 25px;
@@ -54,7 +54,7 @@
     }
     .search-btn:hover { background: #00bfff; box-shadow: 0 0 12px rgba(0, 240, 255, 0.4); }
 
-    /* ДАШБОРД СЛЕВА */
+    /* Дашборд статистики слева вверху */
     .custom-tooltip {
       position: absolute;
       top: 25px; left: 25px;
@@ -69,7 +69,6 @@
       z-index: 1000; 
       min-width: 300px;
       backdrop-filter: blur(15px);
-      display: block; /* Постоянно виден базовый экран */
     }
     .tooltip-title {
       font-size: 22px; font-weight: 700; margin-bottom: 14px;
@@ -87,7 +86,7 @@
 <body>
 
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Введите ГЕО (Украина, KZ, US, ОАЭ)...">
+    <input type="text" id="search-in" class="search-input" placeholder="Введите страну (Украина, Германия, US)...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
@@ -95,23 +94,24 @@
   
   <div id="tooltip" class="custom-tooltip">
     <div id="tt-title" class="tooltip-title">Глобальный Мониторинг</div>
-    <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">ALL</span></div>
-    <div class="metric"><span class="metric-label">Регион:</span> <span id="tt-pop" class="metric-value">Весь мир</span></div>
-    <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Доступен</span></div>
-    <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Активны</span></div>
-    <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Сканирование</span></div>
+    <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">WORLD</span></div>
+    <div class="metric"><span class="metric-label">Регион ГЕО:</span> <span id="tt-pop" class="metric-value">Вся планета</span></div>
+    <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Стабилен</span></div>
+    <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Онлайн</span></div>
+    <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Анализ</span></div>
   </div>
 
   <script>
     let world = null;
     let activeSearchCountryIso = null;
 
-    // Полная автономная база данных: СНГ, вся ключевая Европа, Азия, Америка, Ближний Восток
-    const globalDatabase = {
+    // Огромная встроенная база данных СНГ, Европы, Азии, Америки и Востока.
+    // Сюда зашиты РЕАЛЬНЫЕ географические координаты центров, чтобы камера летела четко куда надо.
+    const massiveDatabase = {
       "UA": { name: "Украина", reg: "Европа / СНГ", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
       "KZ": { name: "Казахстан", reg: "Азия / СНГ", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
       "US": { name: "США", reg: "Северная Америка", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
-      "DE": { name: "Германия", reg: "Западная Европа", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
+      "DE": { name: "Германия", reg: "Западная  Европа", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
       "PL": { name: "Польша", reg: "Восточная Европа", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
       "GB": { name: "Великобритания", reg: "Западная Европа", fb: "78%", cards: "95%", gambling: "18%", lat: 55.3, lng: -3.4 },
       "BR": { name: "Бразилия", reg: "Южная Америка", fb: "75%", cards: "73%", gambling: "29%", lat: -14.2, lng: -51.9 },
@@ -128,11 +128,31 @@
       "UZ": { name: "Узбекистан", reg: "Азия / СНГ", fb: "35%", cards: "64%", gambling: "19%", lat: 41.3, lng: 69.2 },
       "GE": { name: "Грузия", reg: "Кавказ / СНГ", fb: "66%", cards: "79%", gambling: "25%", lat: 42.3, lng: 43.3 },
       "RU": { name: "Россия", reg: "Евразия", fb: "25%", cards: "91%", gambling: "16%", lat: 61.5, lng: 105.3 },
-      "CN": { name: "Китай", reg: "Восточная Азия", fb: "10%", cards: "95%", gambling: "7%", lat: 35.8, lng: 104.1 }
+      "CN": { name: "Китай", reg: "Восточная Азия", fb: "10%", cards: "95%", gambling: "7%", lat: 35.8, lng: 104.1 },
+      "IN": { name: "Индия", reg: "Южная Азия", fb: "42%", cards: "58%", gambling: "14%", lat: 20.5, lng: 78.9 },
+      "MX": { name: "Мексика", reg: "Центральная Америка", fb: "71%", cards: "62%", gambling: "19%", lat: 23.6, lng: -102.5 },
+      "AR": { name: "Аргентина", reg: "Южная Америка", fb: "69%", cards: "71%", gambling: "22%", lat: -38.4, lng: -63.6 },
+      "ZA": { name: "ЮАР", reg: "Африка", fb: "49%", cards: "67%", gambling: "26%", lat: -30.5, lng: 25.0 },
+      "IE": { name: "Ирландия", reg: "Западная Европа", fb: "76%", cards: "94%", gambling: "13%", lat: 53.4, lng: -8.2 },
+      "SE": { name: "Швеция", reg: "Северная Европа", fb: "71%", cards: "97%", gambling: "10%", lat: 60.1, lng: 18.6 },
+      "NO": { name: "Норвегия", reg: "Северная Европа", fb: "73%", cards: "98%", gambling: "8%", lat: 60.4, lng: 8.4 },
+      "FI": { name: "Финляндия", reg: "Северная Европа", fb: "68%", cards: "96%", gambling: "9%", lat: 61.9, lng: 25.7 },
+      "DK": { name: "Дания", reg: "Северная Европа", fb: "75%", cards: "98%", gambling: "11%", lat: 56.2, lng: 9.5 },
+      "AT": { name: "Австрия", reg: "Центральная Европа", fb: "64%", cards: "95%", gambling: "12%", lat: 47.5, lng: 14.5 },
+      "BE": { name: "Бельгия", reg: "Западная Европа", fb: "67%", cards: "96%", gambling: "11%", lat: 50.5, lng: 4.4 },
+      "PT": { name: "Португалия", reg: "Южная Европа", fb: "72%", cards: "89%", gambling: "15%", lat: 39.3, lng: -8.2 },
+      "GR": { name: "Греция", reg: "Южная Европа", fb: "63%", cards: "84%", gambling: "17%", lat: 39.0, lng: 21.8 },
+      "CZ": { name: "Чехия", reg: "Центральная Европа", fb: "69%", cards: "93%", gambling: "14%", lat: 49.8, lng: 15.4 },
+      "HU": { name: "Венгрия", reg: "Центральная Европа", fb: "71%", cards: "87%", gambling: "13%", lat: 47.1, lng: 19.5 },
+      "RO": { name: "Румыния", reg: "Восточная Европа", fb: "66%", cards: "74%", gambling: "18%", lat: 45.9, lng: 24.9 },
+      "BY": { name: "Беларусь", reg: "Восточная Европа", fb: "31%", cards: "88%", gambling: "15%", lat: 53.7, lng: 27.9 },
+      "TH": { name: "Таиланд", reg: "Юго-Восточная Азия", fb: "78%", cards: "76%", gambling: "24%", lat: 15.8, lng: 100.9 },
+      "MY": { name: "Малайзия", reg: "Юго-Восточная Азия", fb: "81%", cards: "85%", gambling: "16%", lat: 4.2, lng: 101.9 },
+      "IL": { name: "Израиль", reg: "Ближний Восток", fb: "73%", cards: "94%", gambling: "12%", lat: 31.0, lng: 34.8 }
     };
 
-    // Превращаем базу данных в массив красивых неоновых 3D-маркеров активности
-    const markersData = Object.entries(globalDatabase).map(([iso, data]) => ({
+    // Генерируем массив интерактивных 3D-меток для рендера на глобусе
+    const markersData = Object.entries(massiveDatabase).map(([iso, data]) => ({
       iso: iso,
       name: data.name,
       lat: data.lat,
@@ -157,27 +177,27 @@
     }
 
     function initApp() {
-      // Инициализация глобуса без единого fetch-запроса
+      // Инициализация глобуса. Картинки тянутся со стабильного Unpkg, а движок работает на Cloudflare
       world = Globe()
         (document.getElementById('globe-container'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
         .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
         
-        // Отрисовка ГЕО в виде интерактивных 3D-маркеров
+        // Рендерим 3D-метки стран
         .labelsData(markersData)
         .labelLat(d => d.lat)
         .labelLng(d => d.lng)
         .labelText(d => d.name)
-        .labelSize(1.6)
-        // Выбранное ГЕО пульсирует и увеличивается
-        .labelDotRadius(d => (d.iso === activeSearchCountryIso) ? 3.5 : 1.5)
+        .labelSize(1.8)
+        // Логика фокуса: найденное ГЕО увеличивается в 2.5 раза и горит ярким сиянием
+        .labelDotRadius(d => (d.iso === activeSearchCountryIso) ? 3.8 : 1.5)
         .labelColor(d => (d.iso === activeSearchCountryIso) ? '#00f0ff' : 'rgba(0, 240, 255, 0.85)')
         .labelResolution(6)
         
-        // Быстрый локальный ховер (0ms задержки)
+        // Моментальный ховер без единого лага
         .onLabelHover(hoverD => {
           if (hoverD) {
-            const data = globalDatabase[hoverD.iso];
+            const data = massiveDatabase[hoverD.iso];
             if (data) {
               updateDashboard(hoverD.iso, data);
             }
@@ -186,7 +206,7 @@
 
       world.controls().autoRotate = true;
       world.controls().autoRotateSpeed = 0.25;
-      world.controls().enableDamping = true;
+      world.controls().enableDamping = true; // Плавность торможения камеры
     }
 
     function handleSearch() {
@@ -195,12 +215,12 @@
 
       let targetIso2 = null;
 
-      // Поиск по коду
-      if (globalDatabase[query]) {
+      // Поиск по коду (UA, US, KZ...)
+      if (massiveDatabase[query]) {
         targetIso2 = query;
       } else {
-        // Поиск по русскому названию
-        for (const [iso, data] of Object.entries(globalDatabase)) {
+        // Поиск по русскому названию из базы
+        for (const [iso, data] of Object.entries(massiveDatabase)) {
           if (data.name && data.name.toUpperCase().includes(query)) {
             targetIso2 = iso;
             break;
@@ -209,20 +229,20 @@
       }
 
       if (targetIso2) {
-        const country = globalDatabase[targetIso2];
+        const country = massiveDatabase[targetIso2];
         activeSearchCountryIso = targetIso2;
         
-        // Обновляем маркеры для изменения размера
+        // Перерисовываем маркеры, чтобы активировать увеличение точки
         world.labelsData(markersData);
         world.controls().autoRotate = false;
         
-        // Подлет камеры
+        // Плавный красивый полет камеры к выбранной стране
         world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.3 }, 1500);
         
-        // Выводим данные в дашборд
+        // Моментально забиваем данные в левый дашборд
         updateDashboard(targetIso2, country);
       } else {
-        alert('Данное ГЕО отсутствует в реестре. Доступны: Украина, Казахстан, Нидерланды, США, Германия, ОАЭ, Сингапур...');
+        alert('Данное ГЕО не найдено в реестре. Доступны: Украина, Казахстан, Нидерланды, ОАЭ, США, Германия, Франция, Сингапур, Чехия...');
       }
     }
 
@@ -231,7 +251,7 @@
       if (e.key === 'Enter') handleSearch();
     });
 
-    // Запуск приложения
+    // Запуск
     initApp();
   </script>
 </body>
