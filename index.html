@@ -1,67 +1,84 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Global Globe v21.0 Stable</title>
-  <script src="https://unpkg.com/globe.gl"></script>
+  <title>Global Monitor Pro</title>
   <style>
-    body { margin: 0; background-color: #040814; color: #fff; font-family: sans-serif; overflow: hidden; }
-    #globe-container { width: 100vw; height: 100vh; }
-    
-    /* Твой интерфейс */
-    .ui-panel { position: absolute; top: 25px; left: 25px; z-index: 10; background: rgba(10, 16, 35, 0.9); border: 1px solid #00f0ff; padding: 20px; border-radius: 12px; }
-    .search-panel { position: absolute; top: 25px; right: 25px; z-index: 10; display: flex; gap: 10px; }
+    body { margin: 0; background: #020617; color: #fff; font-family: sans-serif; overflow: hidden; }
+    #canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+    .panel { position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.9); padding: 20px; border: 1px solid #00f0ff; border-radius: 12px; pointer-events: none; }
+    .search { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
     input { background: #000; border: 1px solid #00f0ff; color: #fff; padding: 10px; border-radius: 8px; }
-    button { background: #00f0ff; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    button { background: #00f0ff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <div class="ui-panel" id="ui">
-    <h3 id="tt-title">Global Monitoring</h3>
-    <p>ISO: <span id="tt-iso">WORLD</span></p>
-    <p id="tt-reg">Select a country</p>
-  </div>
+<div class="panel" id="info">
+  <h3 id="c-name">Select a Country</h3>
+  <div id="c-data">Click on any point to view statistics</div>
+</div>
 
-  <div class="search-panel">
-    <input type="text" id="search" placeholder="Search GEO...">
-    <button onclick="handleSearch()">Search</button>
-  </div>
+<div class="search">
+  <input type="text" id="q" placeholder="Enter ISO (e.g. NG, SN)...">
+  <button onclick="search()">Search</button>
+</div>
 
-  <div id="globe-container"></div>
+<canvas id="canvas"></canvas>
 
-  <script>
-    const database = {
-      "NG": { name: "Nigeria", reg: "W. Africa", fb: "46%", lat: 9.08, lng: 8.67 },
-      "SN": { name: "Senegal", reg: "W. Africa", fb: "41%", lat: 14.49, lng: -14.45 },
-      "CM": { name: "Cameroon", reg: "C. Africa", fb: "33%", lat: 7.37, lng: 12.35 },
-      "ET": { name: "Ethiopia", reg: "E. Africa", fb: "16%", lat: 9.14, lng: 40.48 },
-      "CI": { name: "Cote d'Ivoire", reg: "W. Africa", fb: "38%", lat: 7.54, lng: -5.55 }
-    };
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-    const world = Globe()(document.getElementById('globe-container'))
-      .globeColor('#1e293b')
-      .showGraticules(true)
-      .atmosphereColor('#00f0ff')
-      .atmosphereAltitude(0.2)
-      .labelsData(Object.values(database))
-      .labelLat(d => d.lat)
-      .labelLng(d => d.lng)
-      .labelText(d => d.name)
-      .labelColor(() => '#00f0ff')
-      .onLabelClick(d => {
-        document.getElementById('tt-title').innerText = d.name;
-        document.getElementById('tt-iso').innerText = d.fb;
-        document.getElementById('tt-reg').innerText = d.reg;
-      });
+// Твоя база данных (никаких внешних ссылок)
+const geo = {
+  "NG": { name: "Nigeria", fb: "46%", cards: "38%", g: "32%", x: 0.55, y: 0.55 },
+  "SN": { name: "Senegal", fb: "41%", cards: "39%", g: "15%", x: 0.45, y: 0.50 },
+  "CM": { name: "Cameroon", fb: "33%", cards: "28%", g: "26%", x: 0.58, y: 0.58 },
+  "ET": { name: "Ethiopia", fb: "16%", cards: "22%", g: "11%", x: 0.65, y: 0.53 },
+  "ML": { name: "Mali", fb: "25%", cards: "17%", g: "20%", x: 0.48, y: 0.48 },
+  "UA": { name: "Ukraine", fb: "68%", cards: "84%", g: "14%", x: 0.60, y: 0.35 }
+};
 
-    world.controls().autoRotate = true;
-    world.controls().autoRotateSpeed = 0.5;
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = 200;
 
-    function handleSearch() {
-      const val = document.getElementById('search').value;
-      alert("Searching for: " + val);
-    }
-  </script>
+  // Рисуем тело глобуса
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = "#0a0f1d";
+  ctx.fill();
+  ctx.strokeStyle = "#00f0ff";
+  ctx.stroke();
+
+  // Рисуем страны
+  Object.keys(geo).forEach(key => {
+    const c = geo[key];
+    const px = cx + (c.x - 0.5) * r * 2;
+    const py = cy + (c.y - 0.5) * r * 2;
+    
+    ctx.fillStyle = "#00f0ff";
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+function search() {
+  const q = document.getElementById('q').value.toUpperCase();
+  if (geo[q]) {
+    document.getElementById('c-name').innerText = geo[q].name;
+    document.getElementById('c-data').innerHTML = `FB: ${geo[q].fb}<br>Cards: ${geo[q].cards}<br>Gamble: ${geo[q].g}`;
+  } else {
+    alert("Country not found!");
+  }
+}
+
+window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; draw(); };
+window.onresize();
+</script>
 </body>
 </html>
