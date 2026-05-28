@@ -1,36 +1,26 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Глобальный Гео-Дашборд v13.0 Hard-Fix</title>
+  <title>Global Geo-Dashboard v15.0 Africa Extended</title>
   
   <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
   
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #040814;
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background-color: #020617;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      overflow: hidden;
-      color: #fff;
-      user-select: none;
+      overflow: hidden; color: #fff; user-select: none;
     }
     
-    /* Контейнер теперь жестко прибит к углам экрана через CSS */
     #globe-container {
-      display: block;
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 1;
+      display: block; position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh; z-index: 1;
     }
     
-    /* МАРКЕРЫ СТРАН (HTML-слой) */
+    /* МАРКЕРЫ СТРАН */
     .globe-marker {
       display: flex; flex-direction: column; align-items: center;
       cursor: pointer; pointer-events: auto !important;
@@ -46,13 +36,13 @@
       box-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
     }
     .marker-label {
-      background: rgba(5, 10, 25, 0.9); border: 1px solid rgba(0, 240, 255, 0.4);
+      background: rgba(7, 12, 32, 0.9); border: 1px solid rgba(0, 240, 255, 0.4);
       padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
       color: #fff; margin-top: 5px; white-space: nowrap; backdrop-filter: blur(4px);
     }
     .globe-marker:hover .marker-label,
     .globe-marker.active .marker-label {
-      border-color: #ff0055; color: #ff0055; background: rgba(20, 5, 15, 0.95);
+      border-color: #ff0055; color: #ff0055; background: rgba(28, 6, 20, 0.95);
     }
 
     /* ИНТЕРФЕЙС ПАНЕЛЕЙ */
@@ -64,10 +54,10 @@
     }
     .search-input {
       background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(0, 240, 255, 0.2);
-      border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; width: 220px; outline: none;
+      border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; width: 260px; outline: none;
     }
     .search-btn {
-      background: #00f0ff; color: #040814; border: none; border-radius: 8px;
+      background: #00f0ff; color: #020617; border: none; border-radius: 8px;
       padding: 10px 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;
     }
     .search-btn:hover { background: #00bfff; box-shadow: 0 0 10px #00f0ff; }
@@ -75,7 +65,7 @@
     .custom-tooltip {
       position: absolute; top: 25px; left: 25px; z-index: 1000;
       background: rgba(6, 12, 28, 0.95); border: 1px solid #00f0ff;
-      border-radius: 14px; padding: 20px; min-width: 300px; pointer-events: none;
+      border-radius: 14px; padding: 20px; min-width: 310px; pointer-events: none;
       box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
     .tooltip-title { font-size: 22px; font-weight: 700; margin-bottom: 14px; color: #00f0ff; border-bottom: 1px solid rgba(0, 240, 255, 0.2); padding-bottom: 8px; }
@@ -90,39 +80,47 @@
 <body>
 
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Поиск ГЕО (Нигерия, Марокко)...">
-    <button id="search-btn" class="search-btn">Найти</button>
+    <input type="text" id="search-in" class="search-input" placeholder="Search (CI, BF, SN, Cameroon)...">
+    <button id="search-btn" class="search-btn">Search</button>
   </div>
 
   <div id="globe-container"></div>
   
   <div id="tooltip" class="custom-tooltip">
-    <div id="tt-title" class="tooltip-title">Глобальный Мониторинг</div>
-    <div class="metric"><span class="metric-label">ISO Код:</span> <span id="tt-iso" class="metric-value" style="color:#a0aec0;">WORLD</span></div>
-    <div class="metric"><span class="metric-label">Регион:</span> <span id="tt-pop" class="metric-value">Ожидание выбора</span></div>
-    <div class="metric"><span class="metric-label">Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Стабилен</span></div>
-    <div class="metric"><span class="metric-label">Карты/Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Онлайн</span></div>
-    <div class="metric"><span class="metric-label">Гемблинг:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Анализ</span></div>
+    <div id="tt-title" class="tooltip-title">Global Monitoring</div>
+    <div class="metric"><span class="metric-label">ISO 2 Code:</span> <span id="tt-iso" class="metric-value" style="color:#a0aec0;">WORLD</span></div>
+    <div class="metric"><span class="metric-label">GEO Region:</span> <span id="tt-pop" class="metric-value">Select Country</span></div>
+    <div class="metric"><span class="metric-label">Facebook Coverage:</span> <span id="tt-fb" class="metric-value highlight-fb">Stable</span></div>
+    <div class="metric"><span class="metric-label">Cards / Mobile:</span> <span id="tt-cards" class="metric-value highlight-cards">Online</span></div>
+    <div class="metric"><span class="metric-label">Gambling Risk:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Analysis</span></div>
   </div>
 
   <script>
-    // Наша база: СНГ, Европа, Африка, MENA регионы
+    // База данных без кириллицы с расширенным паком Африки
     const massiveDatabase = {
-      "UA": { name: "Украина", reg: "Европа / СНГ", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
-      "KZ": { name: "Казахстан", reg: "Азия / СНГ", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
-      "UZ": { name: "Узбекистан", reg: "Азия / СНГ", fb: "35%", cards: "64%", gambling: "19%", lat: 41.3, lng: 69.2 },
-      "AZ": { name: "Азербайджан", reg: "Кавказ / СНГ", fb: "51%", cards: "72%", gambling: "20%", lat: 40.1, lng: 47.5 },
-      "RU": { name: "Россия", reg: "Евразия", fb: "25%", cards: "91%", gambling: "16%", lat: 55.7, lng: 37.6 },
-      "DE": { name: "Германия", reg: "Западная Европа", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
-      "PL": { name: "Польша", reg: "Восточная Европа", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
-      "US": { name: "США", reg: "Северная Америка", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
-      "AE": { name: "ОАЭ", reg: "MENA / Ближний Восток", fb: "93%", cards: "92%", gambling: "11%", lat: 23.4, lng: 53.8 },
-      "SA": { name: "Саудовская Аравия", reg: "MENA / Ближний Восток", fb: "74%", cards: "81%", gambling: "14%", lat: 23.8, lng: 45.0 },
-      "EG": { name: "Египет", reg: "MENA / Северная Африка", fb: "53%", cards: "44%", gambling: "15%", lat: 26.8, lng: 30.8 },
-      "MA": { name: "Марокко", reg: "MENA / Северная Африка", fb: "49%", cards: "38%", gambling: "19%", lat: 31.7, lng: -7.0 },
-      "NG": { name: "Нигерия", reg: "Западная Африка", fb: "44%", cards: "35%", gambling: "31%", lat: 9.0, lng: 8.6 },
-      "KE": { name: "Кения", reg: "Восточная Африка", fb: "38%", cards: "72%", gambling: "28%", lat: -0.02, lng: 37.9 },
-      "ZA": { name: "ЮАР", reg: "Южная Африка", fb: "49%", cards: "67%", gambling: "26%", lat: -30.5, lng: 25.0 }
+      // ТВОЙ ЗАПРОШЕННЫЙ ПАК (АФРИКА)
+      "CI": { name: "Cote d'Ivoire", reg: "Western Africa", fb: "38%", cards: "34%", gambling: "24%", lat: 7.54, lng: -5.55 },
+      "BF": { name: "Burkina Faso", reg: "Western Africa", fb: "22%", cards: "19%", gambling: "18%", lat: 12.23, lng: -1.56 },
+      "SN": { name: "Senegal", reg: "Western Africa", fb: "41%", cards: "39%", gambling: "15%", lat: 14.49, lng: -14.45 },
+      "CM": { name: "Cameroon", reg: "Central Africa", fb: "33%", cards: "28%", gambling: "26%", lat: 7.37, lng: 12.35 },
+      "ET": { name: "Ethiopia", reg: "Eastern Africa", fb: "16%", cards: "22%", gambling: "11%", lat: 9.14, lng: 40.48 },
+      "ML": { name: "Mali", reg: "Western Africa", fb: "25%", cards: "17%", gambling: "20%", lat: 17.57, lng: -3.99 },
+      
+      // Другая Африка и MENA для связки
+      "NG": { name: "Nigeria", reg: "Western Africa", fb: "46%", cards: "38%", gambling: "32%", lat: 9.08, lng: 8.67 },
+      "KE": { name: "Kenya", reg: "Eastern Africa", fb: "39%", cards: "74%", gambling: "29%", lat: -0.02, lng: 37.90 },
+      "ZA": { name: "South Africa", reg: "Southern Africa", fb: "52%", cards: "69%", gambling: "28%", lat: -30.55, lng: 22.93 },
+      "EG": { name: "Egypt", reg: "MENA / North Africa", fb: "55%", cards: "42%", gambling: "14%", lat: 26.82, lng: 30.80 },
+      "MA": { name: "Morocco", reg: "MENA / North Africa", fb: "51%", cards: "36%", gambling: "18%", lat: 31.79, lng: -7.09 },
+      "GH": { name: "Ghana", reg: "Western Africa", fb: "43%", cards: "46%", gambling: "21%", lat: 7.94, lng: -1.02 },
+
+      // СНГ / Европа / Мир
+      "UA": { name: "Ukraine", reg: "Europe / CIS", fb: "68%", cards: "84%", gambling: "14%", lat: 48.37, lng: 31.16 },
+      "KZ": { name: "Kazakhstan", reg: "Asia / CIS", fb: "48%", cards: "89%", gambling: "21%", lat: 48.01, lng: 66.92 },
+      "UZ": { name: "Uzbekistan", reg: "Asia / CIS", fb: "35%", cards: "64%", gambling: "19%", lat: 41.37, lng: 64.58 },
+      "RU": { name: "Russia", reg: "Eurasia", fb: "25%", cards: "91%", gambling: "16%", lat: 61.52, lng: 105.31 },
+      "IT": { name: "Italy", reg: "Southern Europe", fb: "60%", cards: "88%", gambling: "15%", lat: 41.87, lng: 12.56 },
+      "US": { name: "USA", reg: "North America", fb: "82%", cards: "94%", gambling: "17%", lat: 37.09, lng: -95.71 }
     };
 
     const markersData = Object.entries(massiveDatabase).map(([iso, data]) => ({
@@ -144,19 +142,15 @@
     function initGlobeCore() {
       const container = document.getElementById('globe-container');
       
-      // Вычисляем размеры НАПРЯМУЮ из окна браузера в пикселях
-      const viewWidth = window.innerWidth;
-      const viewHeight = window.innerHeight;
-
-      // Инициализируем глобус с принудительной передачей пикселей
       world = Globe()(container)
-        .width(viewWidth)
-        .height(viewHeight)
-        .globeColor('#0c132c')
+        .width(window.innerWidth)
+        .height(window.innerHeight)
+        .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg')
+        .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png')
+        .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe/example/img/night-stars.png')
         .showAtmosphere(true)
         .atmosphereColor('#00f0ff')
-        .atmosphereAltitude(0.2)
-        .showGraticules(true) // Сетка координат
+        .atmosphereAltitude(0.15)
         .htmlElementsData(markersData)
         .htmlElement(d => {
           const el = document.createElement('div');
@@ -185,22 +179,18 @@
         });
 
       world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 0.3;
+      world.controls().autoRotateSpeed = 0.2;
       world.controls().enableDamping = true;
 
-      document.getElementById('tt-pop').textContent = "Карта готова. Выберите ГЕО.";
+      document.getElementById('tt-pop').textContent = "System ready. Africa pack loaded.";
     }
 
-    // Безопасный отложенный запуск ядра
     window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initGlobeCore, 150); // Даем 150мс на то, чтобы Render построил верстку
+      setTimeout(initGlobeCore, 200);
     });
 
-    // Автоматическая адаптация при изменении размеров экрана
     window.addEventListener('resize', () => {
-      if (world) {
-        world.width(window.innerWidth).height(window.innerHeight);
-      }
+      if (world) world.width(window.innerWidth).height(window.innerHeight);
     });
 
     function handleSearch() {
@@ -227,7 +217,7 @@
         world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.35 }, 1500);
         updateDashboard(targetIso2, country);
       } else {
-        alert('ГЕО не найдено в базе.');
+        alert('GEO not found. Try search via ISO: CI, BF, SN, CM, ET, ML...');
       }
     }
 
