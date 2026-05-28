@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Автономный Глобус (Без CORS блокировок)</title>
+  <title>Профессиональный Гео-Дашборд</title>
   
   <script src="https://unpkg.com/globe.gl"></script>
   
@@ -11,84 +11,117 @@
     body {
       margin: 0;
       background-color: #050811;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow: hidden;
       color: #fff;
     }
+
     #globe-container {
       width: 100vw;
       height: 100vh;
       position: absolute;
       top: 0; left: 0;
     }
+
+    /* Современная панель поиска */
     .search-panel {
       position: absolute;
-      top: 20px; left: 20px;
+      top: 25px; left: 25px;
       z-index: 1000;
-      background: rgba(10, 15, 30, 0.9);
-      border: 1px solid #00f0ff;
-      border-radius: 8px;
-      padding: 10px;
+      background: rgba(10, 15, 30, 0.8);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+      backdrop-filter: blur(10px);
       display: flex; gap: 8px;
     }
+
     .search-input {
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(0, 240, 255, 0.4);
-      border-radius: 4px;
-      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
       color: #fff;
       font-size: 14px;
       outline: none;
-      width: 200px;
+      width: 220px;
+      transition: all 0.3s;
     }
+
+    .search-input:focus {
+      border-color: #00f0ff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
     .search-btn {
       background: #00f0ff;
       color: #050811;
       border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
+      border-radius: 6px;
+      padding: 10px 18px;
       font-weight: 700;
       cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
     }
+
+    .search-btn:hover { background: #00bfff; }
+
+    /* Премиальная плашка данных (Тултип) */
     .custom-tooltip {
       position: absolute;
-      background: rgba(10, 15, 30, 0.95);
+      background: rgba(7, 11, 22, 0.95);
       border: 1px solid #00f0ff;
       border-radius: 12px;
       padding: 18px;
       color: #fff;
       font-size: 14px;
       pointer-events: none;
-      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.35);
       display: none;
       z-index: 100;
-      min-width: 270px;
-      backdrop-filter: blur(8px);
+      min-width: 280px;
+      backdrop-filter: blur(12px);
     }
+
     .tooltip-title {
-      font-size: 19px;
+      font-size: 20px;
       font-weight: 700;
       margin-bottom: 12px;
       color: #00f0ff;
-      border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
       padding-bottom: 8px;
     }
+
     .metric {
       display: flex;
       justify-content: space-between;
-      margin: 9px 0;
+      margin: 10px 0;
     }
+
     .metric-label { color: #a0aec0; }
     .metric-value { font-weight: 600; color: #ffffff; }
+    
     .highlight-fb { color: #1877F2; }
-    .highlight-gambling { color: #ff3b30; }
     .highlight-cards { color: #4cd964; }
+    .highlight-gambling { color: #ff3b30; }
+
+    #loader {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px; color: #00f0ff;
+      z-index: 2000; letter-spacing: 3px;
+    }
   </style>
 </head>
 <body>
 
+  <div id="loader">ЗАГРУЗКА ДАННЫХ ДАШБОРДА...</div>
+
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Код (UA) или Название...">
+    <input type="text" id="search-in" class="search-input" placeholder="Код страны (UA) или Название...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
@@ -97,46 +130,16 @@
   <div id="tooltip" class="custom-tooltip">
     <div id="tt-title" class="tooltip-title"></div>
     <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;"></span></div>
-    <div class="metric"><span class="metric-label">Население:</span> <span id="tt-pop" class="metric-value"></span></div>
+    <div class="metric"><span class="metric-label">Общее население:</span> <span id="tt-pop" class="metric-value"></span></div>
     <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb"></span></div>
     <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards"></span></div>
-    <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling"></span></div>
+    <div class="metric"><span class="metric-label">Склонность к гемблингу:</span> <span id="tt-gambling" class="metric-value highlight-gambling"></span></div>
   </div>
 
   <script>
     let world = null;
-
-    // Полностью автономная база данных (используем ISO 2)
-    // Данные о населении теперь зашиты сюда же, чтобы не зависеть от капризных API сайтов
-    const globalCountryRegistry = {
-      "UA": { name: "Украина", pop: "41 000 000", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
-      "KZ": { name: "Казахстан", pop: "19 000 000", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
-      "US": { name: "США", pop: "331 000 000", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
-      "DE": { name: "Германия", pop: "83 000 000", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
-      "PL": { name: "Польша", pop: "38 000 000", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
-      "GB": { name: "Великобритания", pop: "67 000 000", fb: "78%", cards: "95%", gambling: "18%", lat: 55.3, lng: -3.4 },
-      "BR": { name: "Бразилия", pop: "212 000 000", fb: "75%", cards: "73%", gambling: "29%", lat: -14.2, lng: -51.9 }
-    };
-
-    // Генерируем встроенные полигоны в виде квадратов-маркеров вокруг целевых стран,
-    // чтобы обойти блокировку внешних файлов геометрии (.geojson) браузером на ПК.
-    const localPolygons = Object.entries(globalCountryRegistry).map(([iso, data]) => {
-      return {
-        type: "Feature",
-        properties: { ISO_A2: iso, name: data.name },
-        geometry: {
-          type: "Polygon",
-          // Рисуем условные широкие границы-квадраты вокруг координат стран, чтобы на них можно было навести мышь
-          coordinates: [[
-            [data.lng - 4, data.lat - 3],
-            [data.lng + 4, data.lat - 3],
-            [data.lng + 4, data.lat + 3],
-            [data.lng - 4, data.lat + 3],
-            [data.lng - 4, data.lat - 3]
-          ]]
-        }
-      };
-    });
+    let marketingData = {}; 
+    let geoJsonFeatures = [];
 
     const tooltip = document.getElementById('tooltip');
     const ttTitle = document.getElementById('tt-title');
@@ -145,62 +148,112 @@
     const ttFb = document.getElementById('tt-fb');
     const ttCards = document.getElementById('tt-cards');
     const ttGambling = document.getElementById('tt-gambling');
+    const loader = document.getElementById('loader');
 
     function setSafeText(element, value) {
       element.textContent = value || 'нет данных';
     }
 
-    function initApp() {
+    // --- ИНИЦИАЛИЗАЦИЯ И СИНХРОНИЗАЦИЯ ---
+    async function initApp() {
+      try {
+        // 1. Загружаем твои кастомные данные из локального data.json
+        const marketingRes = await fetch('./data.json');
+        if (marketingRes.ok) {
+          marketingData = await marketingRes.json();
+        }
+
+        // 2. Загружаем идеальные контуры стран (GeoJSON)
+        const geoRes = await fetch('https://raw.githubusercontent.com/vasturiano/three-globe/master/example/datasets/ne_110m_admin_0_countries.geojson');
+        const geoData = await geoRes.json();
+        geoJsonFeatures = geoData.features;
+
+        // 3. Загружаем живые данные населения для синхронизации
+        const apiRes = await fetch('https://restcountries.com/v3.1/all?fields=cca2,population,translations');
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          
+          // Обогащаем нашу базу данных живым населением и переводами названий
+          apiData.forEach(c => {
+            const iso2 = c.cca2;
+            if (!marketingData[iso2]) {
+              marketingData[iso2] = { fb: "н/д", cards: "н/д", gambling: "н/д" };
+            }
+            marketingData[iso2].population = c.population.toLocaleString('ru-RU');
+            marketingData[iso2].translatedName = c.translations?.rus?.common || c.translations?.eng?.common || iso2;
+          });
+        }
+
+        // Скрываем загрузочный экран и строим ровный глобус
+        loader.style.display = 'none';
+        buildGlobe();
+
+      } catch (err) {
+        console.error("Критическая ошибка инициализации:", err);
+        loader.textContent = "ОШИБКА ЗАГРУЗКИ. ПРОВЕРЬТЕ ФАЙЛ DATA.JSON";
+      }
+    }
+
+    // --- ПОСТРОЕНИЕ ИДЕАЛЬНОГО ГЛОБУСА ---
+    function buildGlobe() {
       world = Globe()
         (document.getElementById('globe-container'))
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
         .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .polygonsData(geoJsonFeatures)
         
-        // Передаем встроенную прямо в код сетку стран
-        .polygonsData(localPolygons)
-        
-        .polygonCapColor(() => 'rgba(0, 240, 255, 0.15)')
+        // Красивый, строгий дефолтный стиль (прозрачные страны с неоновыми границами)
+        .polygonCapColor(() => 'rgba(0, 150, 255, 0.04)')
         .polygonSideColor(() => 'rgba(5, 10, 20, 0.5)')
-        .polygonStrokeColor(() => '#00f0ff')
-        .polygonLineWidth(1)
+        .polygonStrokeColor(() => 'rgba(0, 240, 255, 0.5)')
+        .polygonLineWidth(0.6)
 
+        // Эффектное неоновое выделение при наведении
         .onPolygonHover(hoverD => {
           if (hoverD) {
-            world.polygonCapColor(d => d === hoverD ? 'rgba(0, 240, 255, 0.5)' : 'rgba(0, 240, 255, 0.15)');
+            world.polygonCapColor(d => d === hoverD ? 'rgba(0, 240, 255, 0.25)' : 'rgba(0, 150, 255, 0.04)');
+            world.polygonStrokeColor(d => d === hoverD ? '#00f0ff' : 'rgba(0, 240, 255, 0.5)');
+            world.polygonLineWidth(d => d === hoverD ? 1.2 : 0.6);
             
             const iso2 = hoverD.properties.ISO_A2;
-            const liveData = globalCountryRegistry[iso2];
+            const data = marketingData[iso2];
 
-            if (liveData) {
-              setSafeText(ttTitle, liveData.name);
-              setSafeText(ttIso, iso2);
-              setSafeText(ttPop, liveData.pop);
-              setSafeText(ttFb, liveData.fb);
-              setSafeText(ttCards, liveData.cards);
-              setSafeText(ttGambling, liveData.gambling);
-              tooltip.style.display = 'block';
-            }
+            // Заполняем данными из нашего общего реестра
+            setSafeText(ttTitle, data?.translatedName || hoverD.properties.NAME);
+            setSafeText(ttIso, iso2 !== "-99" ? iso2 : "н/д");
+            setSafeText(ttPop, data?.population || "н/д");
+            setSafeText(ttFb, data?.fb || "н/д");
+            setSafeText(ttCards, data?.cards || "н/д");
+            setSafeText(ttGambling, data?.gambling || "н/д");
+            
+            tooltip.style.display = 'block';
           } else {
-            world.polygonCapColor(() => 'rgba(0, 240, 255, 0.15)');
+            // Возвращаем исходный стиль, когда мышь ушла
+            world.polygonCapColor(() => 'rgba(0, 150, 255, 0.04)');
+            world.polygonStrokeColor(() => 'rgba(0, 240, 255, 0.5)');
+            world.polygonLineWidth(0.6);
             tooltip.style.display = 'none';
           }
         });
 
       world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 0.4;
+      world.controls().autoRotateSpeed = 0.3;
     }
 
+    // --- ТОЧНЫЙ КОРРЕКТНЫЙ ПОИСК ---
     function handleSearch() {
       const query = document.getElementById('search-in').value.trim().toUpperCase();
       if (!query || !world) return;
 
       let targetIso2 = null;
 
-      if (globalCountryRegistry[query]) {
+      // 1. Проверяем, ввели ли ISO 2 код напрямую (например, "UA")
+      if (marketingData[query]) {
         targetIso2 = query;
       } else {
-        for (const [iso, data] of Object.entries(globalCountryRegistry)) {
-          if (data.name && data.name.toUpperCase().includes(query)) {
+        // 2. Если нет, ищем по русскому названию внутри базы данных
+        for (const [iso, data] of Object.entries(marketingData)) {
+          if (data.translatedName && data.translatedName.toUpperCase().includes(query)) {
             targetIso2 = iso;
             break;
           }
@@ -208,28 +261,47 @@
       }
 
       if (targetIso2) {
-        const data = globalCountryRegistry[targetIso2];
-        world.controls().autoRotate = false;
-        // Летим к зашитым координатам
-        world.pointOfView({ lat: data.lat, lng: data.lng, altitude: 1.5 }, 2000);
+        // Находим реальный векторный полигон страны из GeoJSON для вычисления координат центра
+        const feature = geoJsonFeatures.find(f => f.properties.ISO_A2 === targetIso2);
+        
+        if (feature && feature.properties) {
+          // Выключаем вращение, чтобы сфокусироваться
+          world.controls().autoRotate = false;
+
+          // Достаем встроенные географические координаты центра страны
+          const lat = feature.properties.LABEL_Y;
+          const lng = feature.properties.LABEL_X;
+
+          if (lat !== undefined && lng !== undefined) {
+            // Плавно летим к стране на удобное расстояние (altitude: 1.6)
+            world.pointOfView({ lat: lat, lng: lng, altitude: 1.6 }, 2000);
+            
+            // Заставляем выбранную страну ярко светиться, сбрасывая остальные
+            world.polygonCapColor(d => d.properties.ISO_A2 === targetIso2 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 150, 255, 0.04)');
+            world.polygonStrokeColor(d => d.properties.ISO_A2 === targetIso2 ? '#00f0ff' : 'rgba(0, 240, 255, 0.5)');
+          }
+        } else {
+          alert('Не удалось определить точные границы этой страны.');
+        }
       } else {
-        alert('Страна не найдена. Введите: UA, KZ, US, DE, PL, GB, BR или название.');
+        alert('Страна не найдена. Введите код (UA, KZ, US...) или название на русском.');
       }
     }
 
+    // Слушатели событий интерфейса
     document.getElementById('search-btn').addEventListener('click', handleSearch);
     document.getElementById('search-in').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleSearch();
     });
 
+    // Движение тултипа за курсором
     window.addEventListener('mousemove', (e) => {
       if (tooltip.style.display === 'block') {
-        tooltip.style.left = (e.clientX + 25) + 'px';
+        tooltip.style.left = (e.clientX + 20) + 'px';
         tooltip.style.top = (e.clientY + 20) + 'px';
       }
     });
 
-    // Мгновенный запуск без ожидания скачивания сетей
     initApp();
   </script>
 </body>
