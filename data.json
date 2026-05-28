@@ -1,7 +1,8 @@
 {
-  "UA": { "fb": "68%", "cards": "84%", "gambling": "14%" },
-  "KZ": { "fb": "48%", "cards": "89%", "gambling": "21%" },
-  "US": { "fb": "82%", "cards": "94%", "gambling": "17%" },
-  "DE": { "fb": "62%", "cards": "96%", "gambling": "11%" },
-  "PL": { "fb": "71%", "cards": "92%", "gambling": "13%" }
+  "IT": { "nameRu": "Италия", "fb": "60%", "cards": "88%", "gambling": "15%" },
+  "UA": { "nameRu": "Украина", "fb": "68%", "cards": "84%", "gambling": "14%" },
+  "KZ": { "nameRu": "Казахстан", "fb": "48%", "cards": "89%", "gambling": "21%" },
+  "US": { "nameRu": "США", "fb": "82%", "cards": "94%", "gambling": "17%" },
+  "DE": { "nameRu": "Германия", "fb": "62%", "cards": "96%", "gambling": "11%" },
+  "FR": { "nameRu": "Франция", "fb": "65%", "cards": "н/д", "gambling": "н/д" }
 }
