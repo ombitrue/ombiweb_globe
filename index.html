@@ -1,83 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Global Monitor Pro</title>
-  <style>
-    body { margin: 0; background: #020617; color: #fff; font-family: sans-serif; overflow: hidden; }
-    #canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
-    .panel { position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.9); padding: 20px; border: 1px solid #00f0ff; border-radius: 12px; pointer-events: none; }
-    .search { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
-    input { background: #000; border: 1px solid #00f0ff; color: #fff; padding: 10px; border-radius: 8px; }
-    button { background: #00f0ff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Global Geo Dashboard</title>
+    <style>
+        body { margin: 0; background: #020617; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { display: block; cursor: crosshair; }
+        .panel { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid #00f0ff; border-radius: 10px; pointer-events: none; }
+        .search { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
+        input { background: #000; border: 1px solid #00f0ff; color: #fff; padding: 10px; border-radius: 5px; }
+        button { background: #00f0ff; color: #000; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-<div class="panel" id="info">
-  <h3 id="c-name">Select a Country</h3>
-  <div id="c-data">Click on any point to view statistics</div>
+<div class="panel" id="ui">
+    <h3 id="c-name">Select a Country</h3>
+    <div id="c-stats">Click on the globe to get data</div>
 </div>
 
 <div class="search">
-  <input type="text" id="q" placeholder="Enter ISO (e.g. NG, SN)...">
-  <button onclick="search()">Search</button>
+    <input type="text" id="in" placeholder="Enter ISO (e.g. NG)">
+    <button onclick="find()">Search</button>
 </div>
 
-<canvas id="canvas"></canvas>
+<canvas id="cvs"></canvas>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-
-// Твоя база данных (никаких внешних ссылок)
-const geo = {
-  "NG": { name: "Nigeria", fb: "46%", cards: "38%", g: "32%", x: 0.55, y: 0.55 },
-  "SN": { name: "Senegal", fb: "41%", cards: "39%", g: "15%", x: 0.45, y: 0.50 },
-  "CM": { name: "Cameroon", fb: "33%", cards: "28%", g: "26%", x: 0.58, y: 0.58 },
-  "ET": { name: "Ethiopia", fb: "16%", cards: "22%", g: "11%", x: 0.65, y: 0.53 },
-  "ML": { name: "Mali", fb: "25%", cards: "17%", g: "20%", x: 0.48, y: 0.48 },
-  "UA": { name: "Ukraine", fb: "68%", cards: "84%", g: "14%", x: 0.60, y: 0.35 }
-};
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+// Пул стран
+const points = [
+    { iso: "NG", name: "Nigeria", x: 0.52, y: 0.55, fb: "46%", cards: "38%" },
+    { iso: "SN", name: "Senegal", x: 0.42, y: 0.50, fb: "41%", cards: "39%" },
+    { iso: "CM", name: "Cameroon", x: 0.58, y: 0.58, fb: "33%", cards: "28%" },
+    { iso: "ET", name: "Ethiopia", x: 0.68, y: 0.52, fb: "16%", cards: "22%" },
+    { iso: "ML", name: "Mali", x: 0.48, y: 0.45, fb: "25%", cards: "17%" },
+    { iso: "UA", name: "Ukraine", x: 0.60, y: 0.35, fb: "68%", cards: "84%" }
+];
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const r = 200;
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    const r = Math.min(cvs.width, cvs.height) * 0.3;
+    const cx = cvs.width/2, cy = cvs.height/2;
 
-  // Рисуем тело глобуса
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI*2);
-  ctx.fillStyle = "#0a0f1d";
-  ctx.fill();
-  ctx.strokeStyle = "#00f0ff";
-  ctx.stroke();
+    // Глобус
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.strokeStyle = "#00f0ff"; ctx.lineWidth = 2; ctx.stroke();
 
-  // Рисуем страны
-  Object.keys(geo).forEach(key => {
-    const c = geo[key];
-    const px = cx + (c.x - 0.5) * r * 2;
-    const py = cy + (c.y - 0.5) * r * 2;
-    
-    ctx.fillStyle = "#00f0ff";
-    ctx.beginPath();
-    ctx.arc(px, py, 6, 0, Math.PI*2);
-    ctx.fill();
-  });
+    // Маркеры
+    points.forEach(p => {
+        const px = cx + (p.x - 0.5) * r * 2;
+        const py = cy + (p.y - 0.5) * r * 2;
+        ctx.fillStyle = "#ff0055";
+        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+        ctx.fillText(p.name, px + 10, py);
+    });
 }
 
-function search() {
-  const q = document.getElementById('q').value.toUpperCase();
-  if (geo[q]) {
-    document.getElementById('c-name').innerText = geo[q].name;
-    document.getElementById('c-data').innerHTML = `FB: ${geo[q].fb}<br>Cards: ${geo[q].cards}<br>Gamble: ${geo[q].g}`;
-  } else {
-    alert("Country not found!");
-  }
+function find() {
+    const val = document.getElementById('in').value.toUpperCase();
+    const p = points.find(i => i.iso === val);
+    if(p) {
+        document.getElementById('c-name').innerText = p.name;
+        document.getElementById('c-stats').innerHTML = `FB: ${p.fb}<br>Cards: ${p.cards}`;
+    } else {
+        alert("Not found");
+    }
 }
 
-window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; draw(); };
+window.onresize = () => { cvs.width = window.innerWidth; cvs.height = window.innerHeight; draw(); };
 window.onresize();
 </script>
 </body>
