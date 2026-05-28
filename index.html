@@ -2,76 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Global Geo-Dashboard v19.0 Fixed</title>
+  <title>Global Globe v20.0</title>
+  <script src="https://unpkg.com/globe.gl"></script>
   <style>
-    body { margin: 0; background: #020617; overflow: hidden; color: white; font-family: 'Segoe UI', sans-serif; }
-    #canvas { display: block; width: 100vw; height: 100vh; }
-    .ui { position: absolute; top: 20px; left: 20px; background: rgba(10, 15, 30, 0.85); padding: 20px; border: 1px solid #00f0ff; border-radius: 12px; backdrop-filter: blur(5px); pointer-events: none; width: 250px; }
+    body { margin: 0; background-color: #020617; overflow: hidden; }
+    #globe { width: 100vw; height: 100vh; }
   </style>
 </head>
 <body>
-  <div class="ui">
-    <h3 id="c-name" style="color:#00f0ff; margin-top:0;">Global Monitoring</h3>
-    <div id="c-stats">Select a country to see data</div>
-  </div>
-  <canvas id="canvas"></canvas>
-
+  <div id="globe"></div>
   <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Точные координаты распределения по экрану (0.1 - 0.9)
     const countries = [
-      { name: "Nigeria", x: 0.45, y: 0.55, fb: "46%", cards: "38%", g: "32%" },
-      { name: "Senegal", x: 0.35, y: 0.50, fb: "41%", cards: "39%", g: "15%" },
-      { name: "Cameroon", x: 0.52, y: 0.58, fb: "33%", cards: "28%", g: "26%" },
-      { name: "Mali", x: 0.40, y: 0.45, fb: "25%", cards: "17%", g: "20%" },
-      { name: "Ethiopia", x: 0.65, y: 0.52, fb: "16%", cards: "22%", g: "11%" },
-      { name: "Cote d'Ivoire", x: 0.38, y: 0.55, fb: "38%", cards: "34%", g: "24%" },
-      { name: "Burkina Faso", x: 0.42, y: 0.50, fb: "22%", cards: "19%", g: "18%" },
-      { name: "Kenya", x: 0.68, y: 0.60, fb: "39%", cards: "74%", g: "29%" },
-      { name: "Ghana", x: 0.41, y: 0.56, fb: "43%", cards: "46%", g: "21%" },
-      { name: "Ukraine", x: 0.60, y: 0.30, fb: "68%", cards: "84%", g: "14%" },
-      { name: "Kazakhstan", x: 0.75, y: 0.35, fb: "48%", cards: "89%", g: "21%" }
+      { name: "Nigeria", lat: 9.08, lng: 8.67, fb: "46%", cards: "38%" },
+      { name: "Senegal", lat: 14.49, lng: -14.45, fb: "41%", cards: "39%" },
+      { name: "Cameroon", lat: 7.37, lng: 12.35, fb: "33%", cards: "28%" },
+      { name: "Mali", lat: 17.57, lng: -3.99, fb: "25%", cards: "17%" },
+      { name: "Ethiopia", lat: 9.14, lng: 40.48, fb: "16%", cards: "22%" },
+      { name: "Cote d'Ivoire", lat: 7.54, lng: -5.55, fb: "38%", cards: "34%" },
+      { name: "Burkina Faso", lat: 12.23, lng: -1.56, fb: "22%", cards: "19%" },
+      { name: "Kenya", lat: -0.02, lng: 37.90, fb: "39%", cards: "74%" }
     ];
 
-    let selected = null;
+    const myGlobe = Globe()
+      (document.getElementById('globe'))
+      .backgroundColor('#020617')
+      .globeColor('#1e293b') // Цвет самого шара
+      .showGraticules(true)  // Сетка координат
+      .atmosphereColor('#00f0ff')
+      .atmosphereAltitude(0.25)
+      .labelsData(countries)
+      .labelLat(d => d.lat)
+      .labelLng(d => d.lng)
+      .labelText(d => d.name)
+      .labelSize(1.5)
+      .labelDotRadius(0.8)
+      .labelColor(() => '#00f0ff')
+      .labelResolution(2);
 
-    function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      countries.forEach(c => {
-        const px = c.x * canvas.width;
-        const py = c.y * canvas.height;
-        
-        // Рисуем линию к маркеру
-        ctx.strokeStyle = selected === c ? "#ff0055" : "#00f0ff";
-        ctx.fillStyle = selected === c ? "#ff0055" : "#00f0ff";
-        
-        ctx.beginPath();
-        ctx.arc(px, py, selected === c ? 8 : 4, 0, Math.PI*2);
-        ctx.fill();
-        
-        ctx.fillStyle = "white";
-        ctx.fillText(c.name, px + 12, py + 4);
-      });
-    }
-
-    canvas.addEventListener('click', e => {
-      countries.forEach(c => {
-        const dx = (c.x * canvas.width) - e.clientX;
-        const dy = (c.y * canvas.height) - e.clientY;
-        if (Math.sqrt(dx*dx + dy*dy) < 20) {
-          selected = c;
-          document.getElementById('c-name').innerText = c.name;
-          document.getElementById('c-stats').innerHTML = `FB: ${c.fb}<br>Cards: ${c.cards}<br>Gamble: ${c.g}`;
-          render();
-        }
-      });
-    });
-
-    window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; render(); };
-    window.onresize();
+    // Авто-вращение
+    myGlobe.controls().autoRotate = true;
+    myGlobe.controls().autoRotateSpeed = 0.5;
   </script>
 </body>
 </html>
