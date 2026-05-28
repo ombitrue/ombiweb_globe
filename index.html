@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Интерактивный Гео-Дашборд (Локальная сборка)</title>
+  <title>Автономный Глобус (Без CORS блокировок)</title>
   
   <script src="https://unpkg.com/globe.gl"></script>
   
@@ -15,30 +15,22 @@
       overflow: hidden;
       color: #fff;
     }
-
     #globe-container {
       width: 100vw;
       height: 100vh;
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
     }
-
     .search-panel {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 20px; left: 20px;
       z-index: 1000;
-      background: rgba(10, 15, 30, 0.85);
+      background: rgba(10, 15, 30, 0.9);
       border: 1px solid #00f0ff;
       border-radius: 8px;
       padding: 10px;
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-      backdrop-filter: blur(5px);
-      display: flex;
-      gap: 8px;
+      display: flex; gap: 8px;
     }
-
     .search-input {
       background: rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(0, 240, 255, 0.4);
@@ -49,11 +41,6 @@
       outline: none;
       width: 200px;
     }
-
-    .search-input:focus {
-      border-color: #00f0ff;
-    }
-
     .search-btn {
       background: #00f0ff;
       color: #050811;
@@ -62,9 +49,7 @@
       padding: 8px 16px;
       font-weight: 700;
       cursor: pointer;
-      font-size: 14px;
     }
-
     .custom-tooltip {
       position: absolute;
       background: rgba(10, 15, 30, 0.95);
@@ -80,7 +65,6 @@
       min-width: 270px;
       backdrop-filter: blur(8px);
     }
-
     .tooltip-title {
       font-size: 19px;
       font-weight: 700;
@@ -89,22 +73,13 @@
       border-bottom: 1px solid rgba(0, 240, 255, 0.3);
       padding-bottom: 8px;
     }
-
     .metric {
       display: flex;
       justify-content: space-between;
       margin: 9px 0;
     }
-
-    .metric-label {
-      color: #a0aec0;
-    }
-
-    .metric-value {
-      font-weight: 600;
-      color: #ffffff;
-    }
-    
+    .metric-label { color: #a0aec0; }
+    .metric-value { font-weight: 600; color: #ffffff; }
     .highlight-fb { color: #1877F2; }
     .highlight-gambling { color: #ff3b30; }
     .highlight-cards { color: #4cd964; }
@@ -122,26 +97,46 @@
   <div id="tooltip" class="custom-tooltip">
     <div id="tt-title" class="tooltip-title"></div>
     <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;"></span></div>
-    <div class="metric"><span class="metric-label">Общее население:</span> <span id="tt-pop" class="metric-value"></span></div>
+    <div class="metric"><span class="metric-label">Население:</span> <span id="tt-pop" class="metric-value"></span></div>
     <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb"></span></div>
     <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards"></span></div>
     <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling"></span></div>
   </div>
 
   <script>
-    let globalCountryRegistry = {};
-    let world = null; 
-    let cachedPolygons = [];
+    let world = null;
 
-    const marketingMetrics = {
-      "UA": { name: "Украина", fb: "68%", cards: "84%", gambling: "14%" },
-      "KZ": { name: "Казахстан", fb: "48%", cards: "89%", gambling: "21%" },
-      "US": { name: "США", fb: "82%", cards: "94%", gambling: "17%" },
-      "DE": { name: "Германия", fb: "62%", cards: "96%", gambling: "11%" },
-      "PL": { name: "Польша", fb: "71%", cards: "92%", gambling: "13%" },
-      "GB": { name: "Великобритания", fb: "78%", cards: "95%", gambling: "18%" },
-      "BR": { name: "Бразилия", fb: "75%", cards: "73%", gambling: "29%" }
+    // Полностью автономная база данных (используем ISO 2)
+    // Данные о населении теперь зашиты сюда же, чтобы не зависеть от капризных API сайтов
+    const globalCountryRegistry = {
+      "UA": { name: "Украина", pop: "41 000 000", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
+      "KZ": { name: "Казахстан", pop: "19 000 000", fb: "48%", cards: "89%", gambling: "21%", lat: 48.0, lng: 68.0 },
+      "US": { name: "США", pop: "331 000 000", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
+      "DE": { name: "Германия", pop: "83 000 000", fb: "62%", cards: "96%", gambling: "11%", lat: 51.1, lng: 10.4 },
+      "PL": { name: "Польша", pop: "38 000 000", fb: "71%", cards: "92%", gambling: "13%", lat: 51.9, lng: 19.1 },
+      "GB": { name: "Великобритания", pop: "67 000 000", fb: "78%", cards: "95%", gambling: "18%", lat: 55.3, lng: -3.4 },
+      "BR": { name: "Бразилия", pop: "212 000 000", fb: "75%", cards: "73%", gambling: "29%", lat: -14.2, lng: -51.9 }
     };
+
+    // Генерируем встроенные полигоны в виде квадратов-маркеров вокруг целевых стран,
+    // чтобы обойти блокировку внешних файлов геометрии (.geojson) браузером на ПК.
+    const localPolygons = Object.entries(globalCountryRegistry).map(([iso, data]) => {
+      return {
+        type: "Feature",
+        properties: { ISO_A2: iso, name: data.name },
+        geometry: {
+          type: "Polygon",
+          // Рисуем условные широкие границы-квадраты вокруг координат стран, чтобы на них можно было навести мышь
+          coordinates: [[
+            [data.lng - 4, data.lat - 3],
+            [data.lng + 4, data.lat - 3],
+            [data.lng + 4, data.lat + 3],
+            [data.lng - 4, data.lat + 3],
+            [data.lng - 4, data.lat - 3]
+          ]]
+        }
+      };
+    });
 
     const tooltip = document.getElementById('tooltip');
     const ttTitle = document.getElementById('tt-title');
@@ -155,103 +150,44 @@
       element.textContent = value || 'нет данных';
     }
 
-    // Инициализация приложения
-    async function initApp() {
-      // Чтобы не зависать из-за CORS на локальном ПК, сначала создаем базу из локальных данных
-      Object.keys(marketingMetrics).forEach(iso2 => {
-        globalCountryRegistry[iso2] = {
-          name: marketingMetrics[iso2].name,
-          population: "Грузится...",
-          fb: marketingMetrics[iso2].fb,
-          cards: marketingMetrics[iso2].cards,
-          gambling: marketingMetrics[iso2].gambling
-        };
-      });
+    function initApp() {
+      world = Globe()
+        (document.getElementById('globe-container'))
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        
+        // Передаем встроенную прямо в код сетку стран
+        .polygonsData(localPolygons)
+        
+        .polygonCapColor(() => 'rgba(0, 240, 255, 0.15)')
+        .polygonSideColor(() => 'rgba(5, 10, 20, 0.5)')
+        .polygonStrokeColor(() => '#00f0ff')
+        .polygonLineWidth(1)
 
-      // Запускаем глобус немедленно!
-      buildGlobe();
+        .onPolygonHover(hoverD => {
+          if (hoverD) {
+            world.polygonCapColor(d => d === hoverD ? 'rgba(0, 240, 255, 0.5)' : 'rgba(0, 240, 255, 0.15)');
+            
+            const iso2 = hoverD.properties.ISO_A2;
+            const liveData = globalCountryRegistry[iso2];
 
-      // А параллельно и мягко пробуем обновить население из сети (если не заблочит)
-      try {
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=cca2,population,translations');
-        if (response.ok) {
-          const countriesApiData = await response.json();
-          countriesApiData.forEach(country => {
-            const iso2 = country.cca2;
-            if (globalCountryRegistry[iso2]) {
-              globalCountryRegistry[iso2].population = country.population.toLocaleString('ru-RU');
-              let nameRu = country.translations?.rus?.common;
-              if (nameRu) globalCountryRegistry[iso2].name = nameRu;
-            } else {
-              globalCountryRegistry[iso2] = {
-                name: country.translations?.rus?.common || country.translations?.eng?.common || iso2,
-                population: country.population.toLocaleString('ru-RU'),
-                fb: "н/д", cards: "н/д", gambling: "н/д"
-              };
+            if (liveData) {
+              setSafeText(ttTitle, liveData.name);
+              setSafeText(ttIso, iso2);
+              setSafeText(ttPop, liveData.pop);
+              setSafeText(ttFb, liveData.fb);
+              setSafeText(ttCards, liveData.cards);
+              setSafeText(ttGambling, liveData.gambling);
+              tooltip.style.display = 'block';
             }
-          });
-        }
-      } catch (e) {
-        console.log("Запрос к API заблокирован локально, используются базовые значения.");
-      }
-    }
-
-    function buildGlobe() {
-      // ИСПОЛЬЗУЕМ ВСТРОЕННЫЙ НАБОР ПОЛИГОНОВ, чтобы обойти блокировку CORS в браузере на ПК
-      fetch('https://unpkg.com/three-globe/example/datasets/ne_110m_admin_0_countries.geojson')
-        .then(res => res.json())
-        .then(countries => {
-          cachedPolygons = countries.features;
-
-          world = Globe()
-            (document.getElementById('globe-container'))
-            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-            .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-            
-            // Передаем скачанные полигоны напрямую
-            .polygonsData(cachedPolygons)
-            
-            .polygonCapColor(() => 'rgba(0, 100, 200, 0.12)')
-            .polygonSideColor(() => 'rgba(5, 10, 20, 0.5)')
-            .polygonStrokeColor(() => '#0088ff')
-            .polygonLineWidth(0.7)
-
-            .onPolygonHover(hoverD => {
-              if (hoverD) {
-                world.polygonCapColor(d => d === hoverD ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 100, 200, 0.12)');
-                world.polygonStrokeColor(d => d === hoverD ? '#00f0ff' : '#0088ff');
-                
-                // В этом наборе данных ISO-коды могут лежать в ISO_A2 или в ISO_A2_EH
-                const iso2 = hoverD.properties.ISO_A2 !== "-99" ? hoverD.properties.ISO_A2 : hoverD.properties.POSTAL;
-                const liveData = globalCountryRegistry[iso2];
-
-                if (liveData) {
-                  setSafeText(ttTitle, liveData.name);
-                  setSafeText(ttIso, iso2);
-                  setSafeText(ttPop, liveData.population);
-                  setSafeText(ttFb, liveData.fb);
-                  setSafeText(ttCards, liveData.cards);
-                  setSafeText(ttGambling, liveData.gambling);
-                } else {
-                  setSafeText(ttTitle, hoverD.properties.NAME || 'Неизвестно');
-                  setSafeText(ttIso, iso2);
-                  setSafeText(ttPop, 'Нет данных');
-                  setSafeText(ttFb, 'н/д'); setSafeText(ttCards, 'н/д'); setSafeText(ttGambling, 'н/д');
-                }
-                tooltip.style.display = 'block';
-              } else {
-                world.polygonCapColor(() => 'rgba(0, 100, 200, 0.12)');
-                world.polygonStrokeColor(() => '#0088ff');
-                tooltip.style.display = 'none';
-              }
-            });
-
-          world.controls().autoRotate = true;
-          world.controls().autoRotateSpeed = 0.4;
-        })
-        .catch(err => {
-          alert("Браузер заблокировал файлы геометрии. Пожалуйста, загрузите проект на Render или GitHub для полноценной работы.");
+          } else {
+            world.polygonCapColor(() => 'rgba(0, 240, 255, 0.15)');
+            tooltip.style.display = 'none';
+          }
         });
+
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 0.4;
     }
 
     function handleSearch() {
@@ -272,24 +208,12 @@
       }
 
       if (targetIso2) {
-        const countryPolygon = cachedPolygons.find(p => p.properties.ISO_A2 === targetIso2 || p.properties.POSTAL === targetIso2);
-        
-        if (countryPolygon && countryPolygon.properties) {
-          world.controls().autoRotate = false;
-          
-          // Вычисляем координаты из доступных меток полигона
-          const lat = countryPolygon.properties.LABEL_Y || countryPolygon.properties.LAT_Y;
-          const lng = countryPolygon.properties.LABEL_X || countryPolygon.properties.LNG_X;
-
-          if (lat !== undefined && lng !== undefined) {
-            world.pointOfView({ lat: lat, lng: lng, altitude: 1.8 }, 2000);
-            world.polygonCapColor(d => (d.properties.ISO_A2 === targetIso2 || d.properties.POSTAL === targetIso2) ? 'rgba(0, 240, 255, 0.5)' : 'rgba(0, 100, 200, 0.12)');
-          }
-        } else {
-          alert('Не удалось определить координаты геометрии этой страны на локальном ПК.');
-        }
+        const data = globalCountryRegistry[targetIso2];
+        world.controls().autoRotate = false;
+        // Летим к зашитым координатам
+        world.pointOfView({ lat: data.lat, lng: data.lng, altitude: 1.5 }, 2000);
       } else {
-        alert('Страна не найдена. Введите корректный ISO-2 (UA, KZ, US...) или имя на русском.');
+        alert('Страна не найдена. Введите: UA, KZ, US, DE, PL, GB, BR или название.');
       }
     }
 
@@ -305,6 +229,7 @@
       }
     });
 
+    // Мгновенный запуск без ожидания скачивания сетей
     initApp();
   </script>
 </body>
