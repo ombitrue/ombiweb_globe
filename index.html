@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Глобальный Гео-Дашборд (Все страны мира)</title>
+  
+  <script src="https://unpkg.com/globe.gl"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      background-color: #050811;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      color: #fff;
+    }
+    #globe-container {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0; left: 0;
+    }
+    .search-panel {
+      position: absolute;
+      top: 25px; left: 25px;
+      z-index: 1000;
+      background: rgba(10, 15, 30, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 10px;
+      padding: 8px;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+      backdrop-filter: blur(10px);
+      display: flex; gap: 8px;
+    }
+    .search-input {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      width: 240px;
+    }
+    .search-input:focus { border-color: #00f0ff; }
+    .search-btn {
+      background: #00f0ff; color: #050811;
+      border: none; border-radius: 6px;
+      padding: 10px 18px; font-weight: 700; cursor: pointer;
+    }
+    .custom-tooltip {
+      position: absolute;
+      background: rgba(7, 11, 22, 0.95);
+      border: 1px solid #00f0ff;
+      border-radius: 12px;
+      padding: 18px; color: #fff; font-size: 14px;
+      pointer-events: none;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.35);
+      display: none; z-index: 100; min-width: 290px;
+      backdrop-filter: blur(12px);
+    }
+    .tooltip-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 12px;
+      color: #00f0ff; border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+      padding-bottom: 8px;
+    }
+    .metric { display: flex; justify-content: space-between; margin: 10px 0; }
+    .metric-label { color: #a0aec0; }
+    .metric-value { font-weight: 600; color: #ffffff; }
+    .highlight-fb { color: #1877F2; }
+    .highlight-cards { color: #4cd964; }
+    .highlight-gambling { color: #ff3b30; }
+    #loader {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px; color: #00f0ff; z-index: 2000; letter-spacing: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader">СИНХРОНИЗАЦИЯ СТРАН МИРА...</div>
+
+  <div class="search-panel">
+    <input type="text" id="search-in" class="search-input" placeholder="Введите страну (например: Франция, КA, ТR)...">
+    <button id="search-btn" class="search-btn">Найти</button>
+  </div>
+
+  <div id="globe-container"></div>
+  
+  <div id="tooltip" class="custom-tooltip">
+    <div id="tt-title" class="tooltip-title"></div>
+    <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;"></span></div>
+    <div class="metric"><span class="metric-label">Регион планеты:</span> <span id="tt-reg" class="metric-value" style="color: #a0aec0;"></span></div>
+    <div class="metric"><span class="metric-label">Общее население:</span> <span id="tt-pop" class="metric-value"></span></div>
+    <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb"></span></div>
+    <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards"></span></div>
+    <div class="metric"><span class="metric-label">Склонность к гемблингу:</span> <span id="tt-gambling" class="metric-value highlight-gambling"></span></div>
+  </div>
+
+  <script>
+    let world = null;
+    let finalGlobalRegistry = {}; 
+    let geoJsonFeatures = [];
+
+    const tooltip = document.getElementById('tooltip');
+    const ttTitle = document.getElementById('tt-title');
+    const ttIso = document.getElementById('tt-iso');
+    const ttReg = document.getElementById('tt-reg');
+    const ttPop = document.getElementById('tt-pop');
+    const ttFb = document.getElementById('tt-fb');
+    const ttCards = document.getElementById('tt-cards');
+    const ttGambling = document.getElementById('tt-gambling');
+    const loader = document.getElementById('loader');
+
+    function setSafeText(element, value) {
+      element.textContent = value || 'н/д';
+    }
+
+    // Вспомогательная функция для генерации реалистичных базовых KPI для стран, которых нет в data.json
+    // (Генерирует данные в зависимости от региона мира)
+    function generateSmartBaselineMetrics(region) {
+      const reg = String(region).toLowerCase();
+      if (reg.includes('europe')) {
+        return { fb: "55%-75%", cards: "85%-98%", gambling: "10%-15%" };
+      } else if (reg.includes('asia')) {
+        return { fb: "40%-65%", cards: "60%-85%", gambling: "15%-25%" };
+      } else if (reg.includes('america')) {
+        return { fb: "70%-85%", cards: "70%-90%", gambling: "15%-22%" };
+      } else if (reg.includes('africa')) {
+        return { fb: "25%-45%", cards: "35%-55%", gambling: "8%-14%" };
+      }
+      return { fb: "45%", cards: "65%", gambling: "12%" };
+    }
+
+    async function initApp() {
+      try {
+        let customData = {};
+        // 1. Пытаемся прочитать точечный файл твоих приоритетных стран
+        try {
+          const res = await fetch('./data.json');
+          if (res.ok) customData = await res.json();
+        } catch (e) { console.log("Файл data.json пуст или отсутствует, работаем в авто-режиме."); }
+
+        // 2. Скачиваем официальные контуры ВСЕХ стран планеты
+        const geoRes = await fetch('https://raw.githubusercontent.com/vasturiano/three-globe/master/example/datasets/ne_110m_admin_0_countries.geojson');
+        const geoData = await geoRes.json();
+        geoJsonFeatures = geoData.features;
+
+        // 3. Запрашиваем глобальное API для генерации базы абсолютно всех стран мира
+        const apiRes = await fetch('https://restcountries.com/v3.1/all?fields=cca2,population,translations,region');
+        if (!apiRes.ok) throw new Error('Ошибка API мировых данных');
+        const apiData = await apiRes.json();
+        
+        // Маппим данные: объединяем географию, население и твои кастомные метрики
+        apiData.forEach(country => {
+          const iso2 = country.cca2;
+          const hasCustom = customData[iso2];
+          
+          // Вычисляем базовые KPI, если страна не настроена вручную
+          const baseline = generateSmartBaselineMetrics(country.region);
+          const nameRu = country.translations?.rus?.common || country.translations?.eng?.common || iso2;
+
+          finalGlobalRegistry[iso2] = {
+            name: nameRu,
+            region: country.region || 'Не указан',
+            population: country.population ? country.population.toLocaleString('ru-RU') : "н/д",
+            // Если в data.json есть ручные данные — берем их, если нет — берем сгенерированный базовый уровень
+            fb: hasCustom?.fb ? hasCustom.fb : baseline.fb,
+            cards: hasCustom?.cards ? hasCustom.cards : baseline.cards,
+            gambling: hasCustom?.gambling ? hasCustom.gambling : baseline.gambling
+          };
+        });
+
+        loader.style.display = 'none';
+        buildGlobe();
+
+      } catch (err) {
+        console.error("Глобальный сбой:", err);
+        loader.textContent = "ОШИБКА СИНХРОНИЗАЦИИ. ПРОВЕРЬТЕ СЕТЬ.";
+      }
+    }
+
+    function buildGlobe() {
+      world = Globe()
+        (document.getElementById('globe-container'))
+        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .polygonsData(geoJsonFeatures)
+        
+        .polygonCapColor(() => 'rgba(0, 150, 255, 0.03)')
+        .polygonSideColor(() => 'rgba(5, 10, 20, 0.4)')
+        .polygonStrokeColor(() => 'rgba(0, 240, 255, 0.4)')
+        .polygonLineWidth(0.6)
+
+        .onPolygonHover(hoverD => {
+          if (hoverD) {
+            world.polygonCapColor(d => d === hoverD ? 'rgba(0, 240, 255, 0.25)' : 'rgba(0, 150, 255, 0.03)');
+            world.polygonStrokeColor(d => d === hoverD ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)');
+            
+            const iso2 = hoverD.properties.ISO_A2;
+            const data = finalGlobalRegistry[iso2];
+
+            setSafeText(ttTitle, data?.name || hoverD.properties.NAME);
+            setSafeText(ttIso, iso2 !== "-99" ? iso2 : "н/д");
+            setSafeText(ttReg, data?.region);
+            setSafeText(ttPop, data?.population);
+            setSafeText(ttFb, data?.fb);
+            setSafeText(ttCards, data?.cards);
+            setSafeText(ttGambling, data?.gambling);
+            
+            tooltip.style.display = 'block';
+          } else {
+            world.polygonCapColor(() => 'rgba(0, 150, 255, 0.03)');
+            world.polygonStrokeColor(() => 'rgba(0, 240, 255, 0.4)');
+            tooltip.style.display = 'none';
+          }
+        });
+
+      world.controls().autoRotate = true;
+      world.controls().autoRotateSpeed = 0.25;
+    }
+
+    function handleSearch() {
+      const query = document.getElementById('search-in').value.trim().toUpperCase();
+      if (!query || !world) return;
+
+      let targetIso2 = null;
+
+      if (finalGlobalRegistry[query]) {
+        targetIso2 = query;
+      } else {
+        for (const [iso, data] of Object.entries(finalGlobalRegistry)) {
+          if (data.name && data.name.toUpperCase().includes(query)) {
+            targetIso2 = iso;
+            break;
+          }
+        }
+      }
+
+      if (targetIso2) {
+        const feature = geoJsonFeatures.find(f => f.properties.ISO_A2 === targetIso2);
+        
+        if (feature && feature.properties) {
+          world.controls().autoRotate = false;
+          const lat = feature.properties.LABEL_Y;
+          const lng = feature.properties.LABEL_X;
+
+          if (lat !== undefined && lng !== undefined) {
+            world.pointOfView({ lat: lat, lng: lng, altitude: 1.6 }, 2000);
+            world.polygonCapColor(d => d.properties.ISO_A2 === targetIso2 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 150, 255, 0.03)');
+            world.polygonStrokeColor(d => d.properties.ISO_A2 === targetIso2 ? '#00f0ff' : 'rgba(0, 240, 255, 0.4)');
+          }
+        } else {
+          alert('Контуры этой страны сейчас недоступны на карте.');
+        }
+      } else {
+        alert('Страна не найдена в мировой базе данных.');
+      }
+    }
+
+    document.getElementById('search-btn').addEventListener('click', handleSearch);
+    document.getElementById('search-in').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSearch();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (tooltip.style.display === 'block') {
+        tooltip.style.left = (e.clientX + 20) + 'px';
+        tooltip.style.top = (e.clientY + 20) + 'px';
+      }
+    });
+
+    initApp();
+  </script>
+</body>
+</html>
