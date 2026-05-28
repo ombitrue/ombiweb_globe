@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Глобальный Гео-Дашборд v10.0 Ultimate Space</title>
+  <title>Глобальный Гео-Дашборд v11.0 Core PRO</title>
   
-  <script src="https://unpkg.com/globe.gl"></script>
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl"></script>
   
   <style>
     body {
       margin: 0;
-      background-color: #040814;
+      background-color: #050a18;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       overflow: hidden;
       color: #fff;
@@ -23,16 +23,60 @@
       top: 0; left: 0;
     }
     
+    /* ИНТЕРАКТИВНЫЕ МАРКЕРЫ СТРАН (HTML вместо WebGL - не лагают и не падают) */
+    .globe-marker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto !important;
+    }
+    .marker-dot {
+      width: 6px;
+      height: 6px;
+      background: #00f0ff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff;
+      transition: all 0.3s ease;
+    }
+    .globe-marker:hover .marker-dot,
+    .globe-marker.active .marker-dot {
+      width: 12px;
+      height: 12px;
+      background: #ff0055;
+      box-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
+    }
+    .marker-label {
+      background: rgba(5, 10, 25, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 5px;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(4px);
+    }
+    .globe-marker:hover .marker-label,
+    .globe-marker.active .marker-label {
+      border-color: #ff0055;
+      color: #ff0055;
+      background: rgba(15, 5, 15, 0.9);
+    }
+
     /* ПАНЕЛЬ ПОИСКА: Справа вверху */
     .search-panel {
       position: absolute;
       top: 25px; right: 25px;
       z-index: 1000;
-      background: rgba(10, 16, 32, 0.85);
-      border: 1px solid rgba(0, 240, 255, 0.35);
+      background: rgba(10, 16, 35, 0.9);
+      border: 1px solid rgba(0, 240, 255, 0.4);
       border-radius: 12px;
       padding: 10px;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 240, 255, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(12px);
       display: flex; gap: 10px;
     }
@@ -47,7 +91,7 @@
       width: 250px;
     }
     .search-btn {
-      background: #00f0ff; color: #040814;
+      background: #00f0ff; color: #050a18;
       border: none; border-radius: 8px;
       padding: 10px 22px; font-weight: 700; cursor: pointer;
       font-size: 14px; transition: all 0.2s;
@@ -58,14 +102,14 @@
     .custom-tooltip {
       position: absolute;
       top: 25px; left: 25px;
-      background: rgba(6, 11, 26, 0.95);
+      background: rgba(6, 12, 28, 0.95);
       border: 1px solid #00f0ff;
       border-radius: 14px;
       padding: 20px; 
       color: #fff; 
       font-size: 14px;
       pointer-events: none;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 240, 255, 0.25);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 240, 255, 0.2);
       z-index: 1000; 
       min-width: 320px;
       backdrop-filter: blur(15px);
@@ -86,7 +130,7 @@
 <body>
 
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Введите ГЕО (Нигерия, ОАЭ, Украина)...">
+    <input type="text" id="search-in" class="search-input" placeholder="Поиск (Нигерия, Марокко, Украина)...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
@@ -95,7 +139,7 @@
   <div id="tooltip" class="custom-tooltip">
     <div id="tt-title" class="tooltip-title">Глобальный Мониторинг</div>
     <div class="metric"><span class="metric-label">ISO 2 Код:</span> <span id="tt-iso" class="metric-value" style="color: #a0aec0;">WORLD</span></div>
-    <div class="metric"><span class="metric-label">Регион ГЕО:</span> <span id="tt-pop" class="metric-value">Планета Земля</span></div>
+    <div class="metric"><span class="metric-label">Регион ГЕО:</span> <span id="tt-pop" class="metric-value">Цифровая модель</span></div>
     <div class="metric"><span class="metric-label">Охват Facebook:</span> <span id="tt-fb" class="metric-value highlight-fb">Стабилен</span></div>
     <div class="metric"><span class="metric-label">Банк. карты / Моб:</span> <span id="tt-cards" class="metric-value highlight-cards">Онлайн</span></div>
     <div class="metric"><span class="metric-label">Риск гемблинга:</span> <span id="tt-gambling" class="metric-value highlight-gambling">Анализ</span></div>
@@ -105,7 +149,7 @@
     let world = null;
     let activeSearchCountryIso = null;
 
-    // Расширенная и выверенная база данных: СНГ, Европа, Америка, Азия + ПОЛНЫЙ КЛАСС АФРИКИ И MENA
+    // Огромная база: СНГ, Европа, Америка + Полный стек стран Африки и MENA регионов
     const massiveDatabase = {
       // --- СНГ И ЕВРОПА ---
       "UA": { name: "Украина", reg: "Европа / СНГ", fb: "68%", cards: "84%", gambling: "14%", lat: 48.3, lng: 31.1 },
@@ -122,7 +166,7 @@
       "FR": { name: "Франция", reg: "Западная Европа", fb: "65%", cards: "94%", gambling: "12%", lat: 46.2, lng: 2.2 },
       "NL": { name: "Нидерланды", reg: "Западная Европа", fb: "74%", cards: "98%", gambling: "9%", lat: 52.1, lng: 5.2 },
       
-      // --- МИРОВЫЕ ТИР-1 ХАБЫ ---
+      // --- МИРОВЫЕ МЕГА-ХАБЫ ---
       "US": { name: "США", reg: "Северная Америка", fb: "82%", cards: "94%", gambling: "17%", lat: 37.0, lng: -95.7 },
       "CA": { name: "Канада", reg: "Северная Америка", fb: "79%", cards: "96%", gambling: "14%", lat: 56.1, lng: -106.3 },
       "AU": { name: "Австралия", reg: "Океания", fb: "77%", cards: "95%", gambling: "24%", lat: -25.2, lng: 133.7 },
@@ -157,7 +201,6 @@
       lng: data.lng
     }));
 
-    const tooltip = document.getElementById('tooltip');
     const ttTitle = document.getElementById('tt-title');
     const ttIso = document.getElementById('tt-iso');
     const ttPop = document.getElementById('tt-pop');
@@ -175,51 +218,48 @@
     }
 
     function initApp() {
-      // Инициализация глобуса с железными резервными параметрами видимости
+      // Инициализируем полностью автономную сферу
       world = Globe()
         (document.getElementById('globe-container'))
-        .globeColor('#0a1024') // Защитный темно-синий цвет, если картинка не прогрузится
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+        .globeColor('#0b122c') // Глубокий космический синий цвет сферы
         .showAtmosphere(true)
         .atmosphereColor('#00f0ff')
-        .atmosphereAltitude(0.22)
-        .showGraticules(true) // ЖЕЛЕЗОБЕТОННО: Рисует неоновую 3D-сетку, чтобы сфера всегда была видна!
+        .atmosphereAltitude(0.2)
+        .showGraticules(true) // Рисует крутую неоновую сетку координат (глобус виден ВСЕГДА)
 
-        // СЛОЙ 1: Высокотехнологичные 3D неоновые светящиеся пилоны для каждой страны
-        .pointsData(markersData)
-        .pointLat(d => d.lat)
-        .pointLng(d => d.lng)
-        .pointColor(d => d.iso === activeSearchCountryIso ? '#ff0055' : '#00f0ff')
-        .pointRadius(d => d.iso === activeSearchCountryIso ? 1.4 : 0.45)
-        .pointAltitude(d => d.iso === activeSearchCountryIso ? 0.28 : 0.06)
-        
-        // СЛОЙ 2: Текстовые аккуратные подписи стран рядом с пилонами
-        .labelsData(markersData)
-        .labelLat(d => d.lat)
-        .labelLng(d => d.lng)
-        .labelText(d => d.name)
-        .labelSize(1.6)
-        .labelDotRadius(0.1) // Точку скрываем, так как на её месте стоит 3D пилон
-        .labelColor(d => d.iso === activeSearchCountryIso ? '#ff0055' : 'rgba(0, 240, 255, 0.95)')
-        .labelResolution(6)
-        
-        // Интерактивное наведение мыши
-        .onLabelHover(hoverD => {
-          if (hoverD) {
-            const data = massiveDatabase[hoverD.iso];
-            if (data) updateDashboard(hoverD.iso, data);
+        // Использование сверхлегких HTML-маркеров вместо падучего WebGL текста
+        .htmlElementsData(markersData)
+        .htmlElement(d => {
+          const el = document.createElement('div');
+          el.className = 'globe-marker';
+          if (d.iso === activeSearchCountryIso) {
+            el.classList.add('active');
           }
-        })
-        .onPointHover(hoverD => {
-          if (hoverD) {
-            const data = massiveDatabase[hoverD.iso];
-            if (data) updateDashboard(hoverD.iso, data);
-          }
+          
+          el.innerHTML = `
+            <div class="marker-dot"></div>
+            <div class="marker-label">${d.name}</div>
+          `;
+
+          // Локальные быстрые события мыши без нагрузки на процессор
+          el.onmouseenter = () => {
+            const data = massiveDatabase[d.iso];
+            if (data) updateDashboard(d.iso, data);
+          };
+
+          el.onclick = () => {
+            activeSearchCountryIso = d.iso;
+            world.htmlElementsData(markersData); // Обновляем класс активности
+            world.controls().autoRotate = false;
+            world.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.3 }, 1200);
+            updateDashboard(d.iso, massiveDatabase[d.iso]);
+          };
+
+          return el;
         });
 
       world.controls().autoRotate = true;
-      world.controls().autoRotateSpeed = 0.25;
+      world.controls().autoRotateSpeed = 0.3;
       world.controls().enableDamping = true;
     }
 
@@ -244,16 +284,14 @@
         const country = massiveDatabase[targetIso2];
         activeSearchCountryIso = targetIso2;
         
-        // Мгновенно обновляем слои, чтобы изменить цвет и размер пилона выбранной страны
-        world.pointsData(markersData);
-        world.labelsData(markersData);
+        // Моментально перерисовываем маркеры, чтобы активировать нужный
+        world.htmlElementsData(markersData);
         world.controls().autoRotate = false;
         
-        // Перелет камеры к точке интереса
-        world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.25 }, 1500);
+        world.pointOfView({ lat: country.lat, lng: country.lng, altitude: 1.3 }, 1500);
         updateDashboard(targetIso2, country);
       } else {
-        alert('ГЕО не найдено. Доступны: Нигерия, ОАЭ, Саудовская Аравия, Египет, Марокко, Кения, Украина, США...');
+        alert('ГЕО не найдено. В базе доступны: Нигерия, Марокко, Египет, Саудовская Аравия, Украина, США...');
       }
     }
 
@@ -262,7 +300,6 @@
       if (e.key === 'Enter') handleSearch();
     });
 
-    // Безопасный запуск ядра
     initApp();
   </script>
 </body>
