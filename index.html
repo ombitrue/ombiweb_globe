@@ -272,3 +272,36 @@
             
             const region = feature.properties.CONTINENT || "Планета Земля";
             const ruName = worldRussianNames[targetIso2] || feature.properties.NAME;
+            const data = generateSmartMetrics(region, targetIso2);
+
+            setSafeText(ttTitle, ruName);
+            setSafeText(ttIso, targetIso2);
+            setSafeText(ttPop, region);
+            setSafeText(ttFb, data.fb);
+            setSafeText(ttCards, data.cards);
+            setSafeText(ttGambling, data.gambling);
+            tooltip.style.display = 'block';
+          }
+        }
+      } else {
+        alert('Страна не найдена. Попробуйте ввести: Украина, Казахстан, Нидерланды, Франция, ОАЭ...');
+      }
+    }
+
+    document.getElementById('search-btn').addEventListener('click', handleSearch);
+    document.getElementById('search-in').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSearch();
+    });
+
+    document.getElementById('globe-container').addEventListener('click', () => {
+      if (activeSearchCountryIso) {
+        activeSearchCountryIso = null;
+        world.polygonsData([...geoJsonFeatures]);
+        tooltip.style.display = 'none';
+      }
+    });
+
+    initApp();
+  </script>
+</body>
+</html>
