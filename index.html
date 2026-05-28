@@ -83,7 +83,7 @@
   <div id="loader">СИНХРОНИЗАЦИЯ СТРАН МИРА...</div>
 
   <div class="search-panel">
-    <input type="text" id="search-in" class="search-input" placeholder="Введите страну (например: Франция, КA, ТR)...">
+    <input type="text" id="search-in" class="search-input" placeholder="Введите страну (например: Украина, KZ, US)...">
     <button id="search-btn" class="search-btn">Найти</button>
   </div>
 
@@ -104,6 +104,16 @@
     let finalGlobalRegistry = {}; 
     let geoJsonFeatures = [];
 
+    // --- НАШИ ПРИОРИТЕТНЫЕ ДАННЫЕ ВШИТЫ ПРЯМО СЮДА (Безопасный слой) ---
+    // Теперь, даже если файл data.json сломается, твои главные цифры не пропадут!
+    const hardcodedMarketingData = {
+      "UA": { "fb": "68%", "cards": "84%", "gambling": "14%" },
+      "KZ": { "fb": "48%", "cards": "89%", "gambling": "21%" },
+      "US": { "fb": "82%", "cards": "94%", "gambling": "17%" },
+      "DE": { "fb": "62%", "cards": "96%", "gambling": "11%" },
+      "PL": { "fb": "71%", "cards": "92%", "gambling": "13%" }
+    };
+
     const tooltip = document.getElementById('tooltip');
     const ttTitle = document.getElementById('tt-title');
     const ttIso = document.getElementById('tt-iso');
@@ -118,8 +128,6 @@
       element.textContent = value || 'н/д';
     }
 
-    // Вспомогательная функция для генерации реалистичных базовых KPI для стран, которых нет в data.json
-    // (Генерирует данные в зависимости от региона мира)
     function generateSmartBaselineMetrics(region) {
       const reg = String(region).toLowerCase();
       if (reg.includes('europe')) {
@@ -135,30 +143,33 @@
     }
 
     async function initApp() {
-      try {
-        let customData = {};
-        // 1. Пытаемся прочитать точечный файл твоих приоритетных стран
-        try {
-          const res = await fetch('./data.json');
-          if (res.ok) customData = await res.json();
-        } catch (e) { console.log("Файл data.json пуст или отсутствует, работаем в авто-режиме."); }
+      let externalCustomData = {};
 
-        // 2. Скачиваем официальные контуры ВСЕХ стран планеты
+      // Мягкая попытка прочитать data.json. Если файл битый или его нет — скрипт НЕ упадет.
+      try {
+        const res = await fetch('./data.json');
+        if (res.ok) externalCustomData = await res.json();
+      } catch (e) { 
+        console.log("Внешний data.json недоступен, используется встроенная база."); 
+      }
+
+      // Объединяем встроенные приоритетные данные с данными из внешнего data.json (если он успешно загрузился)
+      const mergedCustomData = Object.assign({}, hardcodedMarketingData, externalCustomData);
+
+      try {
+        // Загружаем контуры стран планеты
         const geoRes = await fetch('https://raw.githubusercontent.com/vasturiano/three-globe/master/example/datasets/ne_110m_admin_0_countries.geojson');
         const geoData = await geoRes.json();
         geoJsonFeatures = geoData.features;
 
-        // 3. Запрашиваем глобальное API для генерации базы абсолютно всех стран мира
+        // Загружаем информацию по всем странам мира
         const apiRes = await fetch('https://restcountries.com/v3.1/all?fields=cca2,population,translations,region');
         if (!apiRes.ok) throw new Error('Ошибка API мировых данных');
         const apiData = await apiRes.json();
         
-        // Маппим данные: объединяем географию, население и твои кастомные метрики
         apiData.forEach(country => {
           const iso2 = country.cca2;
-          const hasCustom = customData[iso2];
-          
-          // Вычисляем базовые KPI, если страна не настроена вручную
+          const hasCustom = mergedCustomData[iso2];
           const baseline = generateSmartBaselineMetrics(country.region);
           const nameRu = country.translations?.rus?.common || country.translations?.eng?.common || iso2;
 
@@ -166,7 +177,6 @@
             name: nameRu,
             region: country.region || 'Не указан',
             population: country.population ? country.population.toLocaleString('ru-RU') : "н/д",
-            // Если в data.json есть ручные данные — берем их, если нет — берем сгенерированный базовый уровень
             fb: hasCustom?.fb ? hasCustom.fb : baseline.fb,
             cards: hasCustom?.cards ? hasCustom.cards : baseline.cards,
             gambling: hasCustom?.gambling ? hasCustom.gambling : baseline.gambling
@@ -178,7 +188,7 @@
 
       } catch (err) {
         console.error("Глобальный сбой:", err);
-        loader.textContent = "ОШИБКА СИНХРОНИЗАЦИИ. ПРОВЕРЬТЕ СЕТЬ.";
+        loader.textContent = "ОШИБКА ЗАГРУЗКИ КАРТ. ПЕРЕЗАГРУЗИТЕ СТРАНИЦУ.";
       }
     }
 
